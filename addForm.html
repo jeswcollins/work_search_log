@@ -1,0 +1,105 @@
+<script>
+/*Add a form for listing Job Titles, Organization, Descriptions, and Hyperlink 
+
+First version used addForm and addInput functions defined here, with setAttribute to write the form and input HTML.
+jwc 2018-05-27
+
+Next version used inputs object to define a form and inputs, with for loops and setAttribute to write the form and input HTML.
+jwc 2018-08-16
+*/
+//add a form
+form=addForm()//params are (action, method), defaults are '//'' and 'post'
+
+//define input types and other attributes
+inputs={};//http://www.json.org/
+inputs.name=['title','organization','person','phone','description','link','submit'];
+//inputs.name=['employer/agency','contact name','contact method','contact phone no.,email,website,etc.','type_of_work']
+inputs.type=['text','text','text','text','text','url','submit'];
+inputs.placeholder=['Job Title','Organization','Person','Phone, Email, or Location','Job Description','Link',false]
+inputs.value=[false,false,false,false,false,false,'Post']
+inputs.onclick=[false,false,false,false,false,false,false]//https://stackoverflow.com/a/11720185/895065, https://developer.mozilla.org/en-US/docs/Web/API/GlobalEventHandlers/onclick
+
+var number_of_columns=inputs.name.length
+for (var index in Object.keys(inputs)) {//check that each array of inputs values has the same length as the names array
+	if (inputs[(Object.keys(inputs)[index])].length!=number_of_columns) {
+		alert("Expected "+number_of_columns+" number of columns. Only found "+inputs[key].length+" entries for "+key+".")
+		break
+	}
+}
+
+inputs.elements=[]
+for (var index=0; index<inputs.type.length; index++) {//setAttribute for each input element via inputs.value, .placeholder and .onclick arrays
+	var current_input=addInput(inputs.type[index])
+	current_input.setAttribute('name',inputs.name[index])
+	if (inputs.value[index]) {current_input.setAttribute('value',inputs.value[index])}
+	if (inputs.placeholder[index]) {current_input.setAttribute('placeholder',inputs.placeholder[index])}
+	if (inputs.onclick[index]) {current_input.setAttribute('onclick',inputs.onclick[index])}
+	inputs.elements.push()
+	form.appendChild(current_input)
+}
+fragment=document.createDocumentFragment()
+fragment.appendChild(form)
+
+function appliedOnClick() {//https://www.diffen.com/difference/GET-vs-POST-HTTP-Requests
+	let xhr = new XMLHttpRequest();//https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/Using_XMLHttpRequest
+	//xhr.addInput
+}
+/*First version
+
+inputJobTitle=addInput('text')
+inputJobTitle.setAttribute('name','title')//[input name]
+inputJobTitle.setAttribute('placeholder','Job Title')
+
+inputOrganization=addInput('text')
+inputOrganization.setAttribute('name','organization')//[input name]
+inputOrganization.setAttribute('placeholder','Organization')
+
+inputDescription=addInput('text')
+inputDescription.setAttribute('name','description')//[input name]
+inputDescription.setAttribute('placeholder','Job Description')
+
+inputLink=addInput('url')
+inputLink.setAttribute('name','link')//[input name]
+inputLink.setAttribute('placeholder','url')
+
+inputSubmit=addInput('submit')
+inputSubmit.value='Post'
+
+form.appendChild(inputJobTitle)
+form.appendChild(inputOrganization)
+form.appendChild(inputDescription)
+form.appendChild(inputLink)
+form.appendChild(inputSubmit)
+
+
+fragment.appendChild(form)*/
+document.body.appendChild(fragment)
+
+
+function addForm(action,method) {
+	let form_method = method || 'post';
+	let form_action = action || '\\';
+	let form = document.createElement('form');
+	form.setAttribute("method", form_method);
+	form.setAttribute("action", form_action);
+	return form
+}
+
+function addInput(type) {
+	let input_type = type || 'text';
+	let input = document.createElement('input');
+	input.setAttribute('type',input_type)
+	return input
+}
+
+/*references:
+Minimally edited (nearly copied) from the original by Rakesh Pai: 
+Rakesh Pai https://stackoverflow.com/a/133997/895065, Sep 25 '08 at 15:28 
+Question by Joseph Holsten: https://stackoverflow.com/q/133925/895065, Sep 25 '08 at 15:15 
+
+https://www.w3.org/TR/html401/interact/forms.html
+https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input
+[input name] https://stackoverflow.com/a/4296402/895065
+https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/url
+*/
+</script>
