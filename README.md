@@ -8,7 +8,7 @@ node/html for logging work searches for unemployment insurance, specifically wit
 2. Download this directory and unzip or just the files addForm.html and server_log_work_search_by_day.js.
 3. Then open Terminal (Mac), or Command Prompt or Powershell (Windows).
 4. `cd` to the directory containing the files.
-5. type `node server_log_work_search_by_day.js` or `node s`<TAB> to autocomplete and press <Enter>.
+5. type `node server_log_work_search_by_day.js` or `node s<TAB>` to autocomplete and press `<Enter>`.
 
 ## How to load this server on localhost automatically at start up (Windows)
 
