@@ -13,9 +13,9 @@ node/html for logging work searches for unemployment insurance, specifically wit
 ## How to load this server on automatically at start up (Windows)
 1. Make a new file, called for example, `server_work_search_log.cmd` in the startup folder:
    `C:/Users/USERNAME/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup/`, where USERNAME is your user name.
-2. In that file, add the following lines
+2. In that file, add the following lines to wherever you saved this node directory, e.g. C:\Users\USERNAME\work_search_log
    ```
-   cd C:\Users\USERNAME\SkyDrive\otherProgramming\serverScripts\workSearchLog
+   cd C:\Users\USERNAME\work_search_log
    node server_log_work_search_by_day.js
    ```
 ## How to move node window to another desktop automatically, to keep primary desktops uncluttered (Windows)
