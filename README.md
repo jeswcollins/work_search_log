@@ -5,7 +5,7 @@ node/html for logging work searches for unemployment insurance, specifically wit
 
 ## How to try it
 1. Install node if you haven't, there are guides online.
-2. Download this directory and unzip or just the files addForm.html and server_log_work_search_by_day.js.
+2. Download this directory and unzip or just the files style.css, addForm.html, and server_log_work_search_by_day.js (but then you will need to create another directory, `mkdir work_search_logs_by_day`)
 3. Then open Terminal (Mac), or Command Prompt or Powershell (Windows).
 4. `cd` to the directory containing the files.
 5. type `node server_log_work_search_by_day.js` or `node s<Tab>` to autocomplete and press `<Enter>`.
