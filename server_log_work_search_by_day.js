@@ -50,8 +50,8 @@ function GETDayLogs(request,response,appendFormFilename,html_header_string,html_
 		appendFormRS.on('end',()=>{//After form is completely sent to client,
 				fs.readdir(storage_directory,(error,files)=>{
 					console.log(files)
-					files.reverse()//Or use Array.pop() and Array.length in createReadFileStreamRespondRecurse function definition
-					createReadFileStreamRespondRecurseEnd(files,storage_directory,response,html_footer_string,checked_today,todaysDate+'.html')
+				        if (files) {files.reverse()//Or use Array.pop() and Array.length in createReadFileStreamRespondRecurse function definition
+						createReadFileStreamRespondRecurseEnd(files,storage_directory,response,html_footer_string,checked_today,todaysDate+'.html')}
 				})
 		})	
 	}
