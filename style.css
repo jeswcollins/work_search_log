@@ -1,109 +1,399 @@
-/* Phase 1 styles. Plain CSS, no framework. */
+/* ------------------------------------------------------------------ *
+ * Work Search Log — design tokens                                     *
+ *                                                                     *
+ * Palette: Radix Teal (accent) + Radix Sage (neutral). Teal is the    *
+ * Radix-recommended neutral pairing for teal accents.                 *
+ * https://www.radix-ui.com/colors                                     *
+ * ------------------------------------------------------------------ */
+:root {
+  /* Radix Teal scale (light) */
+  --teal-1:  #fafefd;
+  --teal-2:  #f1fcfa;
+  --teal-3:  #e7f9f5;
+  --teal-4:  #d9f3ee;
+  --teal-5:  #c6ebe4;
+  --teal-6:  #aedfd6;
+  --teal-7:  #8dcec3;
+  --teal-8:  #53b9ab;
+  --teal-9:  #12a594;
+  --teal-10: #0e9888;
+  --teal-11: #067a6f;
+  --teal-12: #0d3d38;
+
+  /* Radix Sage scale (light) — the matched neutral for teal */
+  --sage-1:  #fbfdfc;
+  --sage-2:  #f7f9f8;
+  --sage-3:  #eef1ef;
+  --sage-4:  #e6e9e8;
+  --sage-5:  #dfe2e0;
+  --sage-6:  #d7dad8;
+  --sage-7:  #cbcfcd;
+  --sage-8:  #b8bcba;
+  --sage-9:  #868e8b;
+  --sage-10: #7c8481;
+  --sage-11: #5f6563;
+  --sage-12: #1a211e;
+
+  /* Semantic mappings */
+  --bg:               var(--sage-2);
+  --surface:          #ffffff;
+  --surface-2:        var(--sage-3);
+  --border:           var(--sage-5);
+  --border-strong:    var(--sage-7);
+  --text:             var(--sage-12);
+  --text-muted:       var(--sage-11);
+  --text-on-accent:   #ffffff;
+
+  --accent:           var(--teal-9);
+  --accent-hover:     var(--teal-10);
+  --accent-text:      var(--teal-11);
+  --accent-bg:        var(--teal-3);
+  --accent-border:    var(--teal-6);
+  --focus-ring:       var(--teal-8);
+
+  /* Status colors */
+  --ok-bg:     #e8f4ea;
+  --ok-text:   #1f5c2c;
+  --ok-border: #b4d6ba;
+
+  --warn-bg:     #fff4d6;
+  --warn-text:   #5a3f00;
+  --warn-border: #e0c060;
+
+  --danger-bg:     #fdecea;
+  --danger-text:   #8f1f15;
+  --danger-border: #f3b7ad;
+  --danger:        #c93c2e;
+  --danger-hover:  #a82e23;
+
+  /* Spacing scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-8: 3rem;
+
+  /* Type scale */
+  --font-xs:   0.75rem;
+  --font-sm:   0.875rem;
+  --font-base: 1rem;
+  --font-lg:   1.125rem;
+  --font-xl:   1.5rem;
+  --font-2xl:  1.875rem;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(13, 61, 56, 0.04), 0 1px 3px rgba(13, 61, 56, 0.06);
+  --shadow-md: 0 4px 12px rgba(13, 61, 56, 0.08);
+
+  /* Motion */
+  --transition: 120ms ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:             #0c1413;
+    --surface:        #131a19;
+    --surface-2:      #1a2120;
+    --border:         #2a3331;
+    --border-strong:  #3a4441;
+    --text:           #e6ebea;
+    --text-muted:     #98a09e;
+    --text-on-accent: #07221f;
+
+    --accent:        #14b8a6;
+    --accent-hover:  #2dd4bf;
+    --accent-text:   #5eead4;
+    --accent-bg:     rgba(20, 184, 166, 0.15);
+    --accent-border: rgba(20, 184, 166, 0.35);
+    --focus-ring:    #2dd4bf;
+
+    --ok-bg:     rgba(78, 184, 110, 0.12);
+    --ok-text:   #87d99a;
+    --ok-border: rgba(78, 184, 110, 0.35);
+
+    --warn-bg:     rgba(255, 196, 60, 0.12);
+    --warn-text:   #ffd58a;
+    --warn-border: rgba(255, 196, 60, 0.35);
+
+    --danger-bg:     rgba(245, 106, 91, 0.12);
+    --danger-text:   #f8a89c;
+    --danger-border: rgba(245, 106, 91, 0.35);
+    --danger:        #f05a4a;
+    --danger-hover:  #f56a5b;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Reset & base                                                        *
+ * ------------------------------------------------------------------ */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { font-size: 16px; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  margin: 1rem;
-  max-width: 1400px;
-  color: #222;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter",
+               Helvetica, Arial, system-ui, sans-serif;
+  font-size: var(--font-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-h2 { margin-top: 0; }
-h3 { font-size: 1em; margin: 0 0 0.5rem; }
+h1, h2, h3, h4 { color: var(--text); line-height: 1.25; margin: 0 0 var(--space-3); }
+h2 { font-size: var(--font-2xl); font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: var(--font-lg); font-weight: 600; }
+p  { margin: 0 0 var(--space-3); }
 
-.muted { color: #666; font-size: 0.9em; }
-.hint  { color: #888; font-weight: normal; font-size: 0.85em; }
+a { color: var(--accent-text); text-decoration: none; transition: color var(--transition); }
+a:hover { color: var(--accent-hover); text-decoration: underline; text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }
 
+.muted { color: var(--text-muted); font-size: var(--font-sm); }
+.hint  { color: var(--text-muted); font-size: var(--font-xs); font-weight: 400; }
+
+/* ------------------------------------------------------------------ *
+ * Layout                                                              *
+ * ------------------------------------------------------------------ */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-5);
+}
+
+/* ------------------------------------------------------------------ *
+ * Top navigation                                                      *
+ * ------------------------------------------------------------------ */
 .topnav {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid #ddd;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  margin: 0 calc(var(--space-5) * -1) var(--space-5);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(8px);
 }
-.topnav a { text-decoration: none; }
 
+.topnav a {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-weight: 500;
+  transition: background var(--transition), color var(--transition);
+}
+.topnav a:hover  { background: var(--surface-2); color: var(--text); text-decoration: none; }
+.topnav a.active { background: var(--accent-bg); color: var(--accent-text); }
+
+/* ------------------------------------------------------------------ *
+ * Week navigation row                                                 *
+ * ------------------------------------------------------------------ */
 .weeknav {
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
   align-items: center;
-  margin-bottom: 1rem;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  font-size: var(--font-sm);
 }
 .weeknav .spacer { flex: 1; }
 
+/* ------------------------------------------------------------------ *
+ * Cards & sections                                                    *
+ * ------------------------------------------------------------------ */
 .card {
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  background: #fafafa;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+  box-shadow: var(--shadow-sm);
 }
 
+/* ------------------------------------------------------------------ *
+ * Forms                                                               *
+ * ------------------------------------------------------------------ */
 .entry-form {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
 }
 .entry-form label {
   display: flex;
   flex-direction: column;
-  font-size: 0.9em;
+  gap: var(--space-1);
+  font-size: var(--font-sm);
   font-weight: 600;
+  color: var(--text);
 }
-.entry-form input,
-.entry-form select,
-.entry-form textarea {
-  font-size: 1rem;
-  padding: 0.3rem;
-  border: 1px solid #bbb;
-  border-radius: 4px;
-  font-weight: normal;
-}
-.entry-form button { grid-column: 1 / -1; padding: 0.5rem; }
+.entry-form .banner,
+.entry-form button[type="submit"] { grid-column: 1 / -1; }
 
+input[type="text"],
+input[type="url"],
+input[type="email"],
+input[type="date"],
+input[type="number"],
+select,
+textarea {
+  font: inherit;
+  font-weight: 400;
+  color: var(--text);
+  background: var(--surface);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition), box-shadow var(--transition);
+  width: 100%;
+}
+textarea { resize: vertical; min-height: 4.5em; }
+
+input:hover, select:hover, textarea:hover {
+  border-color: var(--sage-8);
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+/* ------------------------------------------------------------------ *
+ * Week meta strip                                                     *
+ * ------------------------------------------------------------------ */
 .week-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  align-items: end;
-  padding: 0.75rem;
-  background: #f0f4ff;
-  border: 1px solid #b8c8e8;
-  border-radius: 6px;
-  margin-bottom: 1rem;
+  align-items: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
 }
-.week-meta label { display: flex; flex-direction: column; }
-.week-meta label.grow { flex: 1; }
-.week-meta input[type="text"] { padding: 0.3rem; }
-
-.banner {
-  padding: 0.5rem 0.75rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
+.week-meta label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-sm);
   font-weight: 600;
 }
-.banner.ok   { background: #e6f4ea; color: #1e5e2e; border: 1px solid #a4cdaf; }
-.banner.warn { background: #fff4d6; color: #6b4a00; border: 1px solid #e0c060; }
+.week-meta label.grow { flex: 1 1 240px; }
+.week-meta input[type="checkbox"] { transform: translateY(2px); margin-right: var(--space-1); }
 
+/* ------------------------------------------------------------------ *
+ * Buttons                                                             *
+ * ------------------------------------------------------------------ */
+button {
+  font: inherit;
+  font-weight: 600;
+  color: var(--text-on-accent);
+  background: var(--accent);
+  border: 1px solid transparent;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition), box-shadow var(--transition), transform var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+button:hover    { background: var(--accent-hover); }
+button:active   { transform: translateY(1px); }
+button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+button.ghost {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border-strong);
+  box-shadow: none;
+}
+button.ghost:hover { background: var(--surface-2); }
+
+button.danger {
+  background: var(--danger);
+  color: #fff;
+}
+button.danger:hover { background: var(--danger-hover); }
+
+/* ------------------------------------------------------------------ *
+ * Banners                                                             *
+ * ------------------------------------------------------------------ */
+.banner {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  margin: 0 0 var(--space-4);
+  font-weight: 600;
+  font-size: var(--font-sm);
+  border: 1px solid transparent;
+}
+.banner.ok     { background: var(--ok-bg);     color: var(--ok-text);     border-color: var(--ok-border); }
+.banner.warn   { background: var(--warn-bg);   color: var(--warn-text);   border-color: var(--warn-border); }
+.banner.danger { background: var(--danger-bg); color: var(--danger-text); border-color: var(--danger-border); }
+
+/* ------------------------------------------------------------------ *
+ * Tables                                                              *
+ * ------------------------------------------------------------------ */
 table.entries {
   width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9em;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--font-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
 table.entries th,
 table.entries td {
-  border: 1px solid #ccc;
-  padding: 0.35rem 0.5rem;
-  vertical-align: top;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
   text-align: left;
+  vertical-align: top;
 }
-table.entries th { background: #eee; }
-table.entries tr.legacy td { color: #777; font-style: italic; }
+table.entries th {
+  background: var(--surface-2);
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: var(--font-xs);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  position: sticky;
+  top: 0;
+}
+table.entries tbody tr:last-child td { border-bottom: none; }
+table.entries tbody tr:hover td      { background: var(--sage-2); }
+table.entries tr.legacy td           { color: var(--text-muted); font-style: italic; }
 
-.delete-form { margin-top: 1rem; }
-button.danger { background: #a02020; color: white; border: none; padding: 0.4rem 0.75rem; border-radius: 4px; cursor: pointer; }
+@media (prefers-color-scheme: dark) {
+  table.entries tbody tr:hover td { background: var(--surface-2); }
+}
 
+/* ------------------------------------------------------------------ *
+ * Delete control                                                      *
+ * ------------------------------------------------------------------ */
+.delete-form { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--border); }
+
+/* ------------------------------------------------------------------ *
+ * Print                                                               *
+ * ------------------------------------------------------------------ */
 @media print {
-  .topnav, .weeknav, .entry-form, .week-meta button, .delete-form, a[href$="/edit"] { display: none; }
-  .card { border: none; background: none; padding: 0; }
-  body  { margin: 0; }
+  body { background: white; color: black; }
+  .topnav, .weeknav, .entry-form, .week-meta button, .delete-form,
+  a[href$="/edit"], button { display: none !important; }
+  .card { border: none; background: white; padding: 0; box-shadow: none; }
+  .container { padding: 0; max-width: none; }
+  table.entries, table.entries th, table.entries td { border-color: #333; color: black; }
+  table.entries th { background: #eee; color: black; }
 }
