@@ -43,65 +43,85 @@ export default function EntryForm({ initial, submitLabel, onSubmit, kind = 'job'
     }
   }
 
-  const isNetwork = kind === 'network';
+  if (kind === 'network') {
+    return (
+      <form className="entry-form" onSubmit={handleSubmit}>
+        <Field title="Person" hint="(name)">
+          <input type="text" value={values.person} onChange={update('person')} autoFocus />
+        </Field>
+        <Field title="Employer / Agency">
+          <input type="text" value={values.employer_name} onChange={update('employer_name')} />
+        </Field>
+        <Field title="Contact method">
+          <Select value={values.contact_method} onChange={update('contact_method')} options={CONTACT_METHODS} />
+        </Field>
+        <Field title="Contact info" hint="(phone, email, URL, address)">
+          <input type="text" value={values.contact_info} onChange={update('contact_info')} />
+        </Field>
+        <Field title="Link" hint="(optional — LinkedIn, etc.)">
+          <input type="url" value={values.link} onChange={update('link')} />
+        </Field>
+        <Field title="Notes" className="span-full">
+          <textarea rows={2} value={values.description} onChange={update('description')} />
+        </Field>
+        <Field title="Date">
+          <input type="date" value={values.date} onChange={update('date')} required />
+        </Field>
+
+        {error && <p className="banner warn" role="alert">{error}</p>}
+        <button type="submit" disabled={busy}>{busy ? 'Saving…' : submitLabel}</button>
+      </form>
+    );
+  }
 
   return (
     <form className="entry-form" onSubmit={handleSubmit}>
-      <label>Date
+      <Field title="Date">
         <input type="date" value={values.date} onChange={update('date')} required />
-      </label>
-
-      {isNetwork ? (
-        <>
-          <label>Person <span className="hint">(name)</span>
-            <input type="text" value={values.person} onChange={update('person')} autoFocus />
-          </label>
-          <label>Employer / Agency
-            <input type="text" value={values.employer_name} onChange={update('employer_name')} />
-          </label>
-        </>
-      ) : (
-        <>
-          <label>Type
-            <Select value={values.type} onChange={update('type')} options={TYPES} />
-          </label>
-          <label>Employer / Agency
-            <input type="text" value={values.employer_name} onChange={update('employer_name')} required />
-          </label>
-          <label>Person contacted
-            <input type="text" value={values.person} onChange={update('person')} />
-          </label>
-        </>
-      )}
-
-      <label>Contact method
+      </Field>
+      <Field title="Type">
+        <Select value={values.type} onChange={update('type')} options={TYPES} />
+      </Field>
+      <Field title="Employer / Agency">
+        <input type="text" value={values.employer_name} onChange={update('employer_name')} required />
+      </Field>
+      <Field title="Person contacted">
+        <input type="text" value={values.person} onChange={update('person')} />
+      </Field>
+      <Field title="Contact method">
         <Select value={values.contact_method} onChange={update('contact_method')} options={CONTACT_METHODS} />
-      </label>
-      <label>Contact info <span className="hint">(phone, email, URL, address)</span>
+      </Field>
+      <Field title="Contact info" hint="(phone, email, URL, address)">
         <input type="text" value={values.contact_info} onChange={update('contact_info')} />
-      </label>
-
-      {!isNetwork && (
-        <>
-          <label>Type of work
-            <input type="text" value={values.type_of_work} onChange={update('type_of_work')} />
-          </label>
-          <label>Results
-            <Select value={values.results} onChange={update('results')} options={RESULTS} />
-          </label>
-        </>
-      )}
-
-      <label>Link <span className="hint">(optional — LinkedIn, job post, etc.)</span>
+      </Field>
+      <Field title="Type of work">
+        <input type="text" value={values.type_of_work} onChange={update('type_of_work')} />
+      </Field>
+      <Field title="Results">
+        <Select value={values.results} onChange={update('results')} options={RESULTS} />
+      </Field>
+      <Field title="Link" hint="(optional)">
         <input type="url" value={values.link} onChange={update('link')} />
-      </label>
-      <label className="span-full">Notes
+      </Field>
+      <Field title="Notes" className="span-full">
         <textarea rows={2} value={values.description} onChange={update('description')} />
-      </label>
+      </Field>
 
       {error && <p className="banner warn" role="alert">{error}</p>}
       <button type="submit" disabled={busy}>{busy ? 'Saving…' : submitLabel}</button>
     </form>
+  );
+}
+
+function Field({ title, hint, className, children }) {
+  return (
+    <label className={className}>
+      <span className="field-title">
+        {title}
+        {hint ? <> <span className="hint">{hint}</span></> : null}
+      </span>
+      {children}
+    </label>
   );
 }
 
