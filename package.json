@@ -1,0 +1,17 @@
+{
+  "name": "work_search_log",
+  "version": "0.2.0-phase1",
+  "description": "Local-first work-search log aligned to MA DUA Form 1750. Phase 1: SQLite + edit/backdate/delete + weekly view.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start:legacy": "node server_log_work_search_by_day.js",
+    "migrate": "node migrate.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

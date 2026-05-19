@@ -4,11 +4,15 @@ node/html for logging work searches for unemployment insurance, specifically wit
 ![Screenshot](https://github.com/jeswcollins/work_search_log/blob/master/Annotation%202020-04-29%20070157.png)
 
 ## How to try it
-1. Install node if you haven't, there are guides online.
-2. Download this directory and unzip or just the files style.css, addForm.html, and server_log_work_search_by_day.js (but then you will need to create another directory, `mkdir work_search_logs_by_day`)
-3. Then open Terminal (Mac), or Command Prompt or Powershell (Windows).
-4. `cd` to the directory containing the files.
-5. type `node server_log_work_search_by_day.js` or `node s<Tab>` to autocomplete and press `<Enter>`.
+
+Phase 1 (SQLite, Form-1750-aligned, edit/backdate/delete, weekly view) — requires Node 22.5+:
+
+1. `npm install` (no dependencies yet — this just creates `package-lock.json`).
+2. `npm start` — server listens on http://localhost:1025.
+3. Optional: `npm run migrate -- "/path/to/legacy/work_search_logs_by_day"` to import legacy daily HTML logs into SQLite.
+4. `npm test` runs the integration tests.
+
+The legacy server still works: `npm run start:legacy` (or `node server_log_work_search_by_day.js`).
 
 ## How to load this server on automatically at start up (Windows)
 1. Make a new file, called for example, `server_work_search_log.cmd` in the startup folder:
@@ -16,8 +20,9 @@ node/html for logging work searches for unemployment insurance, specifically wit
 2. In that file, add the following lines to wherever you saved this node directory, e.g. C:\Users\USERNAME\work_search_log
    ```
    cd C:\Users\USERNAME\work_search_log
-   node server_log_work_search_by_day.js
+   node server.js
    ```
+   (Or `node server_log_work_search_by_day.js` for the legacy server.)
 ## How to move node window to another desktop automatically, to keep primary desktops uncluttered (Windows)
 1. Download and unzip VirtualDesktop file, to get VirtualDesktop1.ps1 by Markus Scholtes from [this Microsoft site](https://gallery.technet.microsoft.com/scriptcenter/Powershell-commands-to-d0e79cc5/view/Discussions)
 2. Keep track of where unzip VirtualDesktop, for example: mine is a location like C:/Users/USERNAME/startupScripts/PowerShellScripts/VirtualDesktop/
