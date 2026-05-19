@@ -1,0 +1,41 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dev: backend",
+      "type": "npm",
+      "script": "dev:server",
+      "isBackground": true,
+      "presentation": {
+        "panel": "dedicated",
+        "group": "dev",
+        "reveal": "always",
+        "echo": false,
+        "showReuseMessage": false,
+        "clear": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "dev: frontend",
+      "type": "npm",
+      "script": "dev:client",
+      "isBackground": true,
+      "presentation": {
+        "panel": "dedicated",
+        "group": "dev",
+        "reveal": "always",
+        "echo": false,
+        "showReuseMessage": false,
+        "clear": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "dev: fe + be",
+      "dependsOn": ["dev: backend", "dev: frontend"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    }
+  ]
+}
