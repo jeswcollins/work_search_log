@@ -30,6 +30,7 @@ function init(db) {
       link            TEXT,
       description     TEXT,
       legacy          INTEGER NOT NULL DEFAULT 0,
+      is_dream        INTEGER NOT NULL DEFAULT 0,
       created_at      INTEGER NOT NULL,
       updated_at      INTEGER NOT NULL
     );
@@ -43,6 +44,14 @@ function init(db) {
       updated_at  INTEGER NOT NULL
     );
   `);
+
+  // Defensive migration for databases created before is_dream existed.
+  const cols = db.prepare(`PRAGMA table_info(entries)`).all().map(r => r.name);
+  if (!cols.includes('is_dream')) {
+    db.exec(`ALTER TABLE entries ADD COLUMN is_dream INTEGER NOT NULL DEFAULT 0`);
+  }
+
+  db.exec(`CREATE INDEX IF NOT EXISTS entries_dream_idx ON entries(is_dream)`);
 }
 
 const FIELDS = [
@@ -54,16 +63,18 @@ function insertEntry(db, fields) {
   const now = Date.now();
   const row = pick(fields, FIELDS);
   const legacy = fields.legacy ? 1 : 0;
+  const is_dream = fields.is_dream ? 1 : 0;
   const stmt = db.prepare(`
     INSERT INTO entries
       (date, type, employer_name, person, contact_method, contact_info,
-       type_of_work, results, link, description, legacy, created_at, updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+       type_of_work, results, link, description, legacy, is_dream,
+       created_at, updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `);
   const info = stmt.run(
     row.date, row.type, row.employer_name, row.person, row.contact_method,
     row.contact_info, row.type_of_work, row.results, row.link, row.description,
-    legacy, now, now
+    legacy, is_dream, now, now
   );
   return Number(info.lastInsertRowid);
 }
@@ -85,6 +96,15 @@ function updateEntry(db, id, fields) {
   return info.changes;
 }
 
+function promoteDream(db, id, newDate) {
+  const stmt = db.prepare(`
+    UPDATE entries SET is_dream = 0, date = ?, updated_at = ?
+    WHERE id = ? AND is_dream = 1
+  `);
+  const info = stmt.run(newDate, Date.now(), Number(id));
+  return info.changes;
+}
+
 function deleteEntry(db, id) {
   const info = db.prepare('DELETE FROM entries WHERE id = ?').run(Number(id));
   return info.changes;
@@ -96,28 +116,23 @@ function getEntry(db, id) {
 
 function entriesByDate(db, date) {
   return db.prepare(
-    'SELECT * FROM entries WHERE date = ? ORDER BY created_at ASC'
+    'SELECT * FROM entries WHERE date = ? AND is_dream = 0 ORDER BY created_at ASC'
   ).all(date);
 }
 
 function entriesByWeek(db, weekStartISO, weekEndISO) {
   return db.prepare(
     `SELECT * FROM entries
-     WHERE date >= ? AND date <= ?
+     WHERE date >= ? AND date <= ? AND is_dream = 0
      ORDER BY date ASC, created_at ASC`
   ).all(weekStartISO, weekEndISO);
 }
 
-function entriesRecent(db, limit = 50) {
+function dreams(db) {
   return db.prepare(
-    'SELECT * FROM entries ORDER BY date DESC, created_at DESC LIMIT ?'
-  ).all(limit);
-}
-
-function distinctDatesDesc(db, limit = 30) {
-  return db.prepare(
-    'SELECT DISTINCT date FROM entries ORDER BY date DESC LIMIT ?'
-  ).all(limit).map(r => r.date);
+    `SELECT * FROM entries WHERE is_dream = 1
+     ORDER BY created_at DESC`
+  ).all();
 }
 
 function getWeekMeta(db, weekStart) {
@@ -148,12 +163,12 @@ module.exports = {
   init,
   insertEntry,
   updateEntry,
+  promoteDream,
   deleteEntry,
   getEntry,
   entriesByDate,
   entriesByWeek,
-  entriesRecent,
-  distinctDatesDesc,
+  dreams,
   getWeekMeta,
   setWeekMeta,
   FIELDS,

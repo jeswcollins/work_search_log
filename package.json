@@ -1,11 +1,14 @@
 {
   "name": "work_search_log",
-  "version": "0.2.0-phase1",
-  "description": "Local-first work-search log aligned to MA DUA Form 1750. Phase 1: SQLite + edit/backdate/delete + weekly view.",
+  "version": "0.3.0-phase1-react",
+  "description": "Local-first work-search log aligned to MA DUA Form 1750. Phase 1 (React SPA): SQLite-backed JSON API + Vite-built React client.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "start:legacy": "node server_log_work_search_by_day.js",
+    "dev:server": "node --watch server.js",
+    "dev:client": "vite",
+    "build": "vite build",
     "migrate": "node migrate.js",
     "test": "node --test tests/*.test.js"
   },
@@ -13,5 +16,14 @@
     "node": ">=22.5.0"
   },
   "license": "UNLICENSED",
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^6.0.7"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.1"
+  }
 }

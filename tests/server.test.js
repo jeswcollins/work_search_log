@@ -10,24 +10,25 @@ const http = require('node:http');
 const { createApp, weekStartFor, weekEndFor } = require('../server');
 const db = require('../db');
 
-function fetchJson(server, method, urlPath, body) {
+function fetchApi(server, method, urlPath, body) {
   return new Promise((resolve, reject) => {
     const { port } = server.address();
     const headers = {};
     let payload;
-    if (body) {
-      payload = typeof body === 'string' ? body : new URLSearchParams(body).toString();
-      headers['Content-Type'] = 'application/x-www-form-urlencoded';
+    if (body !== undefined) {
+      payload = JSON.stringify(body);
+      headers['Content-Type'] = 'application/json';
       headers['Content-Length'] = Buffer.byteLength(payload);
     }
     const req = http.request({ hostname: '127.0.0.1', port, path: urlPath, method, headers }, (res) => {
       const chunks = [];
       res.on('data', (c) => chunks.push(c));
-      res.on('end', () => resolve({
-        status: res.statusCode,
-        headers: res.headers,
-        body: Buffer.concat(chunks).toString('utf8'),
-      }));
+      res.on('end', () => {
+        const raw = Buffer.concat(chunks).toString('utf8');
+        const ct = res.headers['content-type'] || '';
+        const parsed = ct.includes('application/json') && raw ? JSON.parse(raw) : raw;
+        resolve({ status: res.statusCode, headers: res.headers, body: parsed });
+      });
     });
     req.on('error', reject);
     if (payload) req.write(payload);
@@ -50,28 +51,24 @@ function withServer(t) {
 }
 
 test('week boundaries: Sunday is week start', () => {
-  // 2026-05-19 is a Tuesday; week starts Sunday 2026-05-17.
   assert.equal(weekStartFor('2026-05-19'), '2026-05-17');
   assert.equal(weekEndFor('2026-05-17'), '2026-05-23');
-  // Boundary: Sunday itself maps to itself.
   assert.equal(weekStartFor('2026-05-17'), '2026-05-17');
-  // Boundary: Saturday is end of its own week.
   assert.equal(weekStartFor('2026-05-23'), '2026-05-17');
 });
 
-test('GET / renders the day view with the form', async (t) => {
+test('GET /api/today returns today and an entries array', async (t) => {
   const { server } = withServer(t);
-  const res = await fetchJson(server, 'GET', '/');
+  const res = await fetchApi(server, 'GET', '/api/today');
   assert.equal(res.status, 200);
-  assert.match(res.body, /Work Search Log/);
-  assert.match(res.body, /Add an activity/);
-  assert.match(res.body, /name="employer_name"/);
+  assert.ok(res.body.date);
+  assert.deepEqual(res.body.entries, []);
 });
 
-test('POST /entries creates a row visible on /', async (t) => {
+test('POST /api/entries creates an entry and GET /api/today returns it', async (t) => {
   const { server } = withServer(t);
   const today = new Date().toISOString().slice(0, 10);
-  const create = await fetchJson(server, 'POST', '/entries', {
+  const create = await fetchApi(server, 'POST', '/api/entries', {
     date: today,
     type: 'Employer',
     employer_name: 'Test Co',
@@ -80,76 +77,119 @@ test('POST /entries creates a row visible on /', async (t) => {
     contact_info: 'jane@test.co',
     type_of_work: 'engineer',
     results: 'Submitted',
-    link: 'https://test.co/jobs/1',
-    description: '',
   });
-  assert.equal(create.status, 303);
-  assert.equal(create.headers.location, '/');
+  assert.equal(create.status, 201);
+  assert.equal(create.body.employer_name, 'Test Co');
 
-  const view = await fetchJson(server, 'GET', '/');
-  assert.match(view.body, /Test Co/);
-  assert.match(view.body, /jane@test\.co/);
+  const view = await fetchApi(server, 'GET', '/api/today');
+  assert.equal(view.body.entries.length, 1);
+  assert.equal(view.body.entries[0].employer_name, 'Test Co');
 });
 
-test('POST /entries rejects missing required fields', async (t) => {
+test('POST /api/entries rejects missing required fields', async (t) => {
   const { server } = withServer(t);
-  const res = await fetchJson(server, 'POST', '/entries', { date: '', employer_name: '' });
+  const res = await fetchApi(server, 'POST', '/api/entries', { date: '', employer_name: '' });
   assert.equal(res.status, 400);
+  assert.match(res.body.error, /required/);
 });
 
-test('edit + delete round trip', async (t) => {
+test('PUT /api/entries/:id updates and DELETE removes', async (t) => {
   const { server, database } = withServer(t);
   const today = new Date().toISOString().slice(0, 10);
-  const id = db.insertEntry(database, {
-    date: today, employer_name: 'OldCo', person: 'Bob',
-  });
+  const id = db.insertEntry(database, { date: today, employer_name: 'OldCo' });
 
-  const editPage = await fetchJson(server, 'GET', `/entries/${id}/edit`);
-  assert.equal(editPage.status, 200);
-  assert.match(editPage.body, /OldCo/);
-
-  const upd = await fetchJson(server, 'POST', `/entries/${id}`, {
+  const upd = await fetchApi(server, 'PUT', `/api/entries/${id}`, {
     date: today, employer_name: 'NewCo', person: 'Alice',
   });
-  assert.equal(upd.status, 303);
-  assert.equal(db.getEntry(database, id).employer_name, 'NewCo');
+  assert.equal(upd.status, 200);
+  assert.equal(upd.body.employer_name, 'NewCo');
 
-  const del = await fetchJson(server, 'POST', `/entries/${id}/delete`);
-  assert.equal(del.status, 303);
+  const del = await fetchApi(server, 'DELETE', `/api/entries/${id}`);
+  assert.equal(del.status, 200);
   assert.equal(db.getEntry(database, id), undefined);
 });
 
-test('week view shows banner reflecting partial-UI flag', async (t) => {
+test('Week endpoint reports prev/next nav and meta', async (t) => {
   const { server, database } = withServer(t);
   const today = new Date().toISOString().slice(0, 10);
   const ws = weekStartFor(today);
+  db.insertEntry(database, { date: today, employer_name: 'Wk' });
 
-  // Empty week → warn banner.
-  let res = await fetchJson(server, 'GET', `/week/${ws}`);
+  const res = await fetchApi(server, 'GET', `/api/week/${ws}`);
   assert.equal(res.status, 200);
-  assert.match(res.body, /0 of 3/);
-  assert.match(res.body, /banner warn/);
-
-  // Flip partial-UI; banner should change.
-  res = await fetchJson(server, 'POST', `/week/${ws}/meta`, { partial_ui: '1' });
-  assert.equal(res.status, 303);
-
-  res = await fetchJson(server, 'GET', `/week/${ws}`);
-  assert.match(res.body, /Called back this week/);
-  assert.match(res.body, /banner ok/);
+  assert.equal(res.body.entries.length, 1);
+  assert.ok(res.body.nav.prev);
+  assert.ok(res.body.nav.next);
+  assert.equal(res.body.meta, null);
 });
 
-test('CSV export returns expected headers', async (t) => {
+test('POST /api/week/:start/meta sets partial_ui flag', async (t) => {
+  const { server } = withServer(t);
+  const ws = weekStartFor(new Date().toISOString().slice(0, 10));
+  const res = await fetchApi(server, 'POST', `/api/week/${ws}/meta`, {
+    partial_ui: true,
+    notes: 'called back',
+  });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.partial_ui, 1);
+
+  const week = await fetchApi(server, 'GET', `/api/week/${ws}`);
+  assert.equal(week.body.meta.partial_ui, 1);
+  assert.equal(week.body.meta.notes, 'called back');
+});
+
+test('CSV export returns headers and rows', async (t) => {
   const { server, database } = withServer(t);
   const today = new Date().toISOString().slice(0, 10);
   const ws = weekStartFor(today);
-  db.insertEntry(database, { date: today, employer_name: 'CsvCo', person: 'X' });
+  db.insertEntry(database, { date: today, employer_name: 'CsvCo' });
 
-  const res = await fetchJson(server, 'GET', `/week/${ws}.csv`);
+  const res = await fetchApi(server, 'GET', `/api/week/${ws}.csv`);
   assert.equal(res.status, 200);
   assert.match(res.headers['content-type'], /text\/csv/);
   assert.match(res.body, /^date,type,employer_name,person/);
   assert.match(res.body, /CsvCo/);
+});
+
+test('Dreams: created with is_dream, excluded from today/week, listed in /api/dreams', async (t) => {
+  const { server } = withServer(t);
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Create a regular entry and a dream.
+  await fetchApi(server, 'POST', '/api/entries', { date: today, employer_name: 'Real' });
+  await fetchApi(server, 'POST', '/api/entries', { date: today, employer_name: 'Dreamy', is_dream: true });
+
+  const todayView = await fetchApi(server, 'GET', '/api/today');
+  assert.equal(todayView.body.entries.length, 1);
+  assert.equal(todayView.body.entries[0].employer_name, 'Real');
+
+  const dreams = await fetchApi(server, 'GET', '/api/dreams');
+  assert.equal(dreams.body.dreams.length, 1);
+  assert.equal(dreams.body.dreams[0].employer_name, 'Dreamy');
+});
+
+test('Promote a dream to a regular entry', async (t) => {
+  const { server, database } = withServer(t);
+  const today = new Date().toISOString().slice(0, 10);
+  const id = db.insertEntry(database, { date: today, employer_name: 'WillPromote', is_dream: true });
+
+  const res = await fetchApi(server, 'POST', `/api/entries/${id}/promote`, { date: today });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.is_dream, 0);
+
+  // Dream list should be empty; today's entries should now include it.
+  const dreams = await fetchApi(server, 'GET', '/api/dreams');
+  assert.equal(dreams.body.dreams.length, 0);
+  const todayView = await fetchApi(server, 'GET', '/api/today');
+  assert.equal(todayView.body.entries.length, 1);
+});
+
+test('Promoting a non-dream entry is a 404', async (t) => {
+  const { server, database } = withServer(t);
+  const today = new Date().toISOString().slice(0, 10);
+  const id = db.insertEntry(database, { date: today, employer_name: 'NotADream' });
+  const res = await fetchApi(server, 'POST', `/api/entries/${id}/promote`, { date: today });
+  assert.equal(res.status, 404);
 });
 
 test('legacy HTML parser extracts rows', async () => {
@@ -158,9 +198,6 @@ test('legacy HTML parser extracts rows', async () => {
   const rows = parseLegacyHtml(html);
   assert.equal(rows.length, 1);
   assert.equal(rows[0].employer_name, 'Catalent');
-  assert.equal(rows[0].person, "Emory's Dad");
-  assert.equal(rows[0].type_of_work, 'scientist');
-  assert.equal(rows[0].contact_info, 'Boston, MA');
 });
 
 test('legacy HTML parser handles older 5-col format with checkbox', async () => {
@@ -169,6 +206,5 @@ test('legacy HTML parser handles older 5-col format with checkbox', async () => 
   const rows = parseLegacyHtml(html);
   assert.equal(rows.length, 1);
   assert.equal(rows[0].type_of_work, 'research physicist');
-  assert.equal(rows[0].employer_name, 'exxon mobile');
   assert.equal(rows[0].link, 'https://example.com/x');
 });

@@ -1,45 +1,35 @@
 'use strict';
 
 /*
- * Work search log — Phase 1 server.
+ * Work search log — Phase 1 (React SPA) server.
  *
- * - SQLite-backed CRUD aligned to MA DUA Form 1750 field vocabulary.
- * - Edit, delete, and backdate entries; one HTML page per day.
- * - Weekly view (Form-1750 shape) at /week and /week/YYYY-MM-DD, with CSV.
- * - Partial-UI week toggle: "called back this week".
+ * - Serves a JSON API under /api/* backed by SQLite.
+ * - Serves the built Vite client from client/dist/ for any non-API GET.
+ * - Falls back to index.html for SPA routes.
  *
- * Designed for personal use on localhost. No auth, no HTTPS.
- * The legacy server (server_log_work_search_by_day.js) remains in place;
- * point your startup script at this file when you're ready to switch.
+ * Field vocabulary aligned to MA DUA Form 1750. Entries can be marked
+ * is_dream=1 ("future / idea") and promoted to a real work search later.
  */
 
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
-const qs = require('node:querystring');
 const db = require('./db');
-const views = require('./views');
+const { entriesToCsv } = require('./views');
 
 const PORT = Number(process.env.PORT) || 1025;
-const REQUIRED_ACTIVITIES_PER_WEEK = 3;
 const MAX_BODY_BYTES = 1_000_000;
+const CLIENT_DIST = path.join(__dirname, 'client', 'dist');
 
-function todayISO() {
-  return toISODate(new Date());
-}
+function todayISO() { return toISODate(new Date()); }
 
 function toISODate(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function weekStartFor(isoDate) {
-  // Week starts Sunday — matches MA DUA's benefit week.
   const d = new Date(isoDate + 'T00:00:00');
-  const dow = d.getDay(); // 0 = Sunday
-  d.setDate(d.getDate() - dow);
+  d.setDate(d.getDate() - d.getDay());
   return toISODate(d);
 }
 
@@ -62,7 +52,7 @@ function readBody(req) {
     req.on('data', (chunk) => {
       length += chunk.length;
       if (length > MAX_BODY_BYTES) {
-        reject(new Error('Request body too large'));
+        reject(new Error('Body too large'));
         req.destroy();
         return;
       }
@@ -73,30 +63,45 @@ function readBody(req) {
   });
 }
 
-async function parseForm(req) {
+async function parseJson(req) {
   const body = await readBody(req);
-  return qs.parse(body);
+  if (!body) return {};
+  try { return JSON.parse(body); }
+  catch { throw Object.assign(new Error('Invalid JSON'), { status: 400 }); }
 }
 
-function send(res, status, body, headers = {}) {
-  res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8', ...headers });
+function json(res, status, body) {
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
+  res.end(JSON.stringify(body));
+}
+
+function text(res, status, body, contentType = 'text/plain; charset=utf-8') {
+  res.writeHead(status, { 'Content-Type': contentType });
   res.end(body);
 }
 
-function redirect(res, location) {
-  res.writeHead(303, { Location: location });
-  res.end();
-}
+const MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.js':   'application/javascript; charset=utf-8',
+  '.mjs':  'application/javascript; charset=utf-8',
+  '.css':  'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg':  'image/svg+xml',
+  '.png':  'image/png',
+  '.jpg':  'image/jpeg',
+  '.ico':  'image/x-icon',
+  '.map':  'application/json; charset=utf-8',
+};
 
-function serveCss(res) {
-  fs.readFile(path.join(__dirname, 'style.css'), (err, data) => {
-    if (err) {
-      res.writeHead(404);
-      res.end('css missing');
-      return;
+function serveFile(res, filePath, fallback) {
+  fs.stat(filePath, (err, stat) => {
+    if (err || !stat.isFile()) {
+      if (fallback) return serveFile(res, fallback);
+      res.writeHead(404); res.end('Not found'); return;
     }
-    res.writeHead(200, { 'Content-Type': 'text/css; charset=utf-8' });
-    res.end(data);
+    const ext = path.extname(filePath).toLowerCase();
+    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+    fs.createReadStream(filePath).pipe(res);
   });
 }
 
@@ -106,105 +111,122 @@ function createApp({ database }) {
       const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
       const { pathname } = url;
 
-      if (req.method === 'GET' && pathname === '/style.css') return serveCss(res);
-
-      if (req.method === 'GET' && pathname === '/') {
-        const date = todayISO();
-        const entries = db.entriesByDate(database, date);
-        send(res, 200, views.dayView({
-          date,
-          entries,
-          weekStart: weekStartFor(date),
-          formDefault: { date },
-        }));
-        return;
+      if (pathname.startsWith('/api/')) {
+        return handleApi(req, res, pathname, database);
       }
 
-      let m;
-      if (req.method === 'GET' && (m = pathname.match(/^\/entries\/(\d+)\/edit$/))) {
-        const entry = db.getEntry(database, m[1]);
-        if (!entry) return send(res, 404, 'Not found');
-        send(res, 200, views.editView({ entry, weekStart: weekStartFor(entry.date) }));
-        return;
+      // Legacy CSS path (handy when running from source without a build)
+      if (req.method === 'GET' && pathname === '/style.css') {
+        return serveFile(res, path.join(__dirname, 'style.css'));
       }
 
-      if (req.method === 'POST' && pathname === '/entries') {
-        const fields = await parseForm(req);
-        if (!fields.date || !fields.employer_name) {
-          return send(res, 400, 'date and employer_name are required');
-        }
-        db.insertEntry(database, fields);
-        return redirect(res, '/');
+      if (req.method !== 'GET') {
+        return text(res, 405, 'Method not allowed');
       }
 
-      if (req.method === 'POST' && (m = pathname.match(/^\/entries\/(\d+)$/))) {
-        const fields = await parseForm(req);
-        if (!fields.date || !fields.employer_name) {
-          return send(res, 400, 'date and employer_name are required');
-        }
-        const changed = db.updateEntry(database, m[1], fields);
-        if (!changed) return send(res, 404, 'Not found');
-        return redirect(res, `/week/${weekStartFor(fields.date)}`);
+      // Static client assets, with SPA fallback to index.html.
+      const safe = path.normalize(pathname).replace(/^[/\\]+/, '');
+      const candidate = path.join(CLIENT_DIST, safe);
+      const indexHtml = path.join(CLIENT_DIST, 'index.html');
+      if (pathname === '/' || !path.extname(safe)) {
+        return serveFile(res, indexHtml);
       }
-
-      if (req.method === 'POST' && (m = pathname.match(/^\/entries\/(\d+)\/delete$/))) {
-        const entry = db.getEntry(database, m[1]);
-        if (!entry) return send(res, 404, 'Not found');
-        db.deleteEntry(database, m[1]);
-        return redirect(res, `/week/${weekStartFor(entry.date)}`);
-      }
-
-      if (req.method === 'GET' && pathname === '/week') {
-        return redirect(res, `/week/${weekStartFor(todayISO())}`);
-      }
-
-      if (req.method === 'GET' && (m = pathname.match(/^\/week\/(\d{4}-\d{2}-\d{2})\.csv$/))) {
-        const ws = m[1];
-        const we = weekEndFor(ws);
-        const entries = db.entriesByWeek(database, ws, we);
-        res.writeHead(200, {
-          'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': `attachment; filename="work-search-${ws}.csv"`,
-        });
-        res.end(views.entriesToCsv(entries));
-        return;
-      }
-
-      if (req.method === 'GET' && (m = pathname.match(/^\/week\/(\d{4}-\d{2}-\d{2})$/))) {
-        const ws = m[1];
-        const we = weekEndFor(ws);
-        const entries = db.entriesByWeek(database, ws, we);
-        const meta = db.getWeekMeta(database, ws);
-        send(res, 200, views.weekView({
-          weekStart: ws,
-          weekEnd: we,
-          entries,
-          meta,
-          requiredActivities: REQUIRED_ACTIVITIES_PER_WEEK,
-          weekNav: {
-            prev: shiftWeek(ws, -7),
-            next: shiftWeek(ws, 7),
-          },
-        }));
-        return;
-      }
-
-      if (req.method === 'POST' && (m = pathname.match(/^\/week\/(\d{4}-\d{2}-\d{2})\/meta$/))) {
-        const ws = m[1];
-        const fields = await parseForm(req);
-        db.setWeekMeta(database, ws, {
-          partial_ui: fields.partial_ui === '1',
-          notes: fields.notes || null,
-        });
-        return redirect(res, `/week/${ws}`);
-      }
-
-      send(res, 404, 'Not found');
+      return serveFile(res, candidate, indexHtml);
     } catch (err) {
       console.error('handler error:', err);
-      if (!res.headersSent) send(res, 500, 'Server error');
+      if (!res.headersSent) text(res, err.status || 500, err.message || 'Server error');
     }
   };
+}
+
+async function handleApi(req, res, pathname, database) {
+  let m;
+
+  if (req.method === 'GET' && pathname === '/api/today') {
+    const date = todayISO();
+    return json(res, 200, { date, entries: db.entriesByDate(database, date) });
+  }
+
+  if (req.method === 'GET' && pathname === '/api/dreams') {
+    return json(res, 200, { dreams: db.dreams(database) });
+  }
+
+  if (req.method === 'POST' && pathname === '/api/entries') {
+    const fields = await parseJson(req);
+    if (!fields.date || !fields.employer_name) {
+      return json(res, 400, { error: 'date and employer_name are required' });
+    }
+    const id = db.insertEntry(database, fields);
+    return json(res, 201, db.getEntry(database, id));
+  }
+
+  if ((m = pathname.match(/^\/api\/entries\/(\d+)$/))) {
+    const id = Number(m[1]);
+    if (req.method === 'GET') {
+      const row = db.getEntry(database, id);
+      if (!row) return json(res, 404, { error: 'Not found' });
+      return json(res, 200, row);
+    }
+    if (req.method === 'PUT') {
+      const fields = await parseJson(req);
+      if (!fields.date || !fields.employer_name) {
+        return json(res, 400, { error: 'date and employer_name are required' });
+      }
+      const changed = db.updateEntry(database, id, fields);
+      if (!changed) return json(res, 404, { error: 'Not found' });
+      return json(res, 200, db.getEntry(database, id));
+    }
+    if (req.method === 'DELETE') {
+      const changed = db.deleteEntry(database, id);
+      if (!changed) return json(res, 404, { error: 'Not found' });
+      return json(res, 200, { ok: true });
+    }
+  }
+
+  if (req.method === 'POST' && (m = pathname.match(/^\/api\/entries\/(\d+)\/promote$/))) {
+    const id = Number(m[1]);
+    const fields = await parseJson(req);
+    const newDate = fields.date || todayISO();
+    const changed = db.promoteDream(database, id, newDate);
+    if (!changed) return json(res, 404, { error: 'Not a dream, or not found' });
+    return json(res, 200, db.getEntry(database, id));
+  }
+
+  if (req.method === 'GET' && (m = pathname.match(/^\/api\/week\/(\d{4}-\d{2}-\d{2})\.csv$/))) {
+    const ws = m[1];
+    const we = weekEndFor(ws);
+    const entries = db.entriesByWeek(database, ws, we);
+    res.writeHead(200, {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="work-search-${ws}.csv"`,
+    });
+    res.end(entriesToCsv(entries));
+    return;
+  }
+
+  if (req.method === 'GET' && (m = pathname.match(/^\/api\/week\/(\d{4}-\d{2}-\d{2})$/))) {
+    const ws = m[1];
+    const we = weekEndFor(ws);
+    return json(res, 200, {
+      week_start: ws,
+      week_end: we,
+      entries: db.entriesByWeek(database, ws, we),
+      meta: db.getWeekMeta(database, ws) || null,
+      nav: { prev: shiftWeek(ws, -7), next: shiftWeek(ws, 7) },
+    });
+  }
+
+  if (req.method === 'POST' && (m = pathname.match(/^\/api\/week\/(\d{4}-\d{2}-\d{2})\/meta$/))) {
+    const ws = m[1];
+    const fields = await parseJson(req);
+    db.setWeekMeta(database, ws, {
+      partial_ui: !!fields.partial_ui,
+      notes: fields.notes || null,
+    });
+    return json(res, 200, db.getWeekMeta(database, ws));
+  }
+
+  return json(res, 404, { error: 'Not found' });
 }
 
 function start({ port = PORT, dbPath } = {}) {
@@ -215,8 +237,6 @@ function start({ port = PORT, dbPath } = {}) {
   return { server, database };
 }
 
-if (require.main === module) {
-  start();
-}
+if (require.main === module) start();
 
 module.exports = { createApp, start, weekStartFor, weekEndFor, shiftWeek, toISODate };
