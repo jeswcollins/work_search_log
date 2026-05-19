@@ -6,7 +6,8 @@ import App from './App.jsx';
 import Today from './pages/Today.jsx';
 import Week from './pages/Week.jsx';
 import Edit from './pages/Edit.jsx';
-import Dreams from './pages/Dreams.jsx';
+import Jobs from './pages/Jobs.jsx';
+import Network from './pages/Network.jsx';
 
 const root = createRoot(document.getElementById('root'));
 root.render(
@@ -17,7 +18,9 @@ root.render(
         <Route path="week" element={<WeekRedirect />} />
         <Route path="week/:start" element={<Week />} />
         <Route path="entries/:id/edit" element={<Edit />} />
-        <Route path="dreams" element={<Dreams />} />
+        <Route path="jobs" element={<Jobs />} />
+        <Route path="network" element={<Network />} />
+        <Route path="dreams" element={<Navigate to="/jobs" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

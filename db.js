@@ -20,6 +20,7 @@ function init(db) {
     CREATE TABLE IF NOT EXISTS entries (
       id              INTEGER PRIMARY KEY AUTOINCREMENT,
       date            TEXT    NOT NULL,
+      kind            TEXT    NOT NULL DEFAULT 'job',
       type            TEXT,
       employer_name   TEXT,
       person          TEXT,
@@ -45,13 +46,17 @@ function init(db) {
     );
   `);
 
-  // Defensive migration for databases created before is_dream existed.
+  // Defensive migrations for databases created on earlier branches.
   const cols = db.prepare(`PRAGMA table_info(entries)`).all().map(r => r.name);
   if (!cols.includes('is_dream')) {
     db.exec(`ALTER TABLE entries ADD COLUMN is_dream INTEGER NOT NULL DEFAULT 0`);
   }
+  if (!cols.includes('kind')) {
+    db.exec(`ALTER TABLE entries ADD COLUMN kind TEXT NOT NULL DEFAULT 'job'`);
+  }
 
   db.exec(`CREATE INDEX IF NOT EXISTS entries_dream_idx ON entries(is_dream)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS entries_kind_idx  ON entries(kind)`);
 }
 
 const FIELDS = [
@@ -64,19 +69,34 @@ function insertEntry(db, fields) {
   const row = pick(fields, FIELDS);
   const legacy = fields.legacy ? 1 : 0;
   const is_dream = fields.is_dream ? 1 : 0;
+  const kind = (fields.kind === 'network') ? 'network' : 'job';
   const stmt = db.prepare(`
     INSERT INTO entries
-      (date, type, employer_name, person, contact_method, contact_info,
+      (date, kind, type, employer_name, person, contact_method, contact_info,
        type_of_work, results, link, description, legacy, is_dream,
        created_at, updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `);
   const info = stmt.run(
-    row.date, row.type, row.employer_name, row.person, row.contact_method,
+    row.date, kind, row.type, row.employer_name, row.person, row.contact_method,
     row.contact_info, row.type_of_work, row.results, row.link, row.description,
     legacy, is_dream, now, now
   );
   return Number(info.lastInsertRowid);
+}
+
+function patchEntry(db, id, patch) {
+  const cur = getEntry(db, id);
+  if (!cur) return 0;
+  const next = { ...cur, ...patch };
+  const is_dream = next.is_dream ? 1 : 0;
+  const kind = (next.kind === 'network') ? 'network' : 'job';
+  const stmt = db.prepare(`
+    UPDATE entries SET
+      kind = ?, is_dream = ?, updated_at = ?
+    WHERE id = ?
+  `);
+  return stmt.run(kind, is_dream, Date.now(), Number(id)).changes;
 }
 
 function updateEntry(db, id, fields) {
@@ -116,22 +136,31 @@ function getEntry(db, id) {
 
 function entriesByDate(db, date) {
   return db.prepare(
-    'SELECT * FROM entries WHERE date = ? AND is_dream = 0 ORDER BY created_at ASC'
+    `SELECT * FROM entries
+     WHERE date = ? AND kind = 'job' AND is_dream = 0
+     ORDER BY created_at ASC`
   ).all(date);
 }
 
 function entriesByWeek(db, weekStartISO, weekEndISO) {
   return db.prepare(
     `SELECT * FROM entries
-     WHERE date >= ? AND date <= ? AND is_dream = 0
+     WHERE date >= ? AND date <= ? AND kind = 'job' AND is_dream = 0
      ORDER BY date ASC, created_at ASC`
   ).all(weekStartISO, weekEndISO);
 }
 
-function dreams(db) {
+function allJobs(db) {
   return db.prepare(
-    `SELECT * FROM entries WHERE is_dream = 1
-     ORDER BY created_at DESC`
+    `SELECT * FROM entries WHERE kind = 'job'
+     ORDER BY is_dream ASC, date DESC, created_at DESC`
+  ).all();
+}
+
+function allNetwork(db) {
+  return db.prepare(
+    `SELECT * FROM entries WHERE kind = 'network'
+     ORDER BY date DESC, created_at DESC`
   ).all();
 }
 
@@ -163,12 +192,14 @@ module.exports = {
   init,
   insertEntry,
   updateEntry,
+  patchEntry,
   promoteDream,
   deleteEntry,
   getEntry,
   entriesByDate,
   entriesByWeek,
-  dreams,
+  allJobs,
+  allNetwork,
   getWeekMeta,
   setWeekMeta,
   FIELDS,

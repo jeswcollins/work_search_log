@@ -19,10 +19,12 @@ export const api = {
   getEntry: (id) => request('GET', `/api/entries/${id}`),
   createEntry: (fields) => request('POST', '/api/entries', fields),
   updateEntry: (id, fields) => request('PUT', `/api/entries/${id}`, fields),
+  patchEntry: (id, patch) => request('PATCH', `/api/entries/${id}`, patch),
   deleteEntry: (id) => request('DELETE', `/api/entries/${id}`),
   promote: (id, date) => request('POST', `/api/entries/${id}/promote`, { date }),
   week: (start) => request('GET', `/api/week/${start}`),
   setWeekMeta: (start, meta) => request('POST', `/api/week/${start}/meta`, meta),
-  dreams: () => request('GET', '/api/dreams'),
+  jobs: () => request('GET', '/api/jobs'),
+  network: () => request('GET', '/api/network'),
   csvUrl: (start) => `/api/week/${start}.csv`,
 };

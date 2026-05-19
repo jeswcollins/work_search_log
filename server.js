@@ -147,8 +147,12 @@ async function handleApi(req, res, pathname, database) {
     return json(res, 200, { date, entries: db.entriesByDate(database, date) });
   }
 
-  if (req.method === 'GET' && pathname === '/api/dreams') {
-    return json(res, 200, { dreams: db.dreams(database) });
+  if (req.method === 'GET' && pathname === '/api/jobs') {
+    return json(res, 200, { jobs: db.allJobs(database) });
+  }
+
+  if (req.method === 'GET' && pathname === '/api/network') {
+    return json(res, 200, { network: db.allNetwork(database) });
   }
 
   if (req.method === 'POST' && pathname === '/api/entries') {
@@ -173,6 +177,12 @@ async function handleApi(req, res, pathname, database) {
         return json(res, 400, { error: 'date and employer_name are required' });
       }
       const changed = db.updateEntry(database, id, fields);
+      if (!changed) return json(res, 404, { error: 'Not found' });
+      return json(res, 200, db.getEntry(database, id));
+    }
+    if (req.method === 'PATCH') {
+      const patch = await parseJson(req);
+      const changed = db.patchEntry(database, id, patch);
       if (!changed) return json(res, 404, { error: 'Not found' });
       return json(res, 200, db.getEntry(database, id));
     }

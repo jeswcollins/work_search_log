@@ -151,11 +151,10 @@ test('CSV export returns headers and rows', async (t) => {
   assert.match(res.body, /CsvCo/);
 });
 
-test('Dreams: created with is_dream, excluded from today/week, listed in /api/dreams', async (t) => {
+test('Dreams: created with is_dream, excluded from today/week, present in /api/jobs', async (t) => {
   const { server } = withServer(t);
   const today = new Date().toISOString().slice(0, 10);
 
-  // Create a regular entry and a dream.
   await fetchApi(server, 'POST', '/api/entries', { date: today, employer_name: 'Real' });
   await fetchApi(server, 'POST', '/api/entries', { date: today, employer_name: 'Dreamy', is_dream: true });
 
@@ -163,9 +162,48 @@ test('Dreams: created with is_dream, excluded from today/week, listed in /api/dr
   assert.equal(todayView.body.entries.length, 1);
   assert.equal(todayView.body.entries[0].employer_name, 'Real');
 
-  const dreams = await fetchApi(server, 'GET', '/api/dreams');
-  assert.equal(dreams.body.dreams.length, 1);
-  assert.equal(dreams.body.dreams[0].employer_name, 'Dreamy');
+  const jobs = await fetchApi(server, 'GET', '/api/jobs');
+  assert.equal(jobs.body.jobs.length, 2);
+  const employers = jobs.body.jobs.map(j => j.employer_name).sort();
+  assert.deepEqual(employers, ['Dreamy', 'Real']);
+});
+
+test('PATCH /api/entries/:id flips is_dream without requiring other fields', async (t) => {
+  const { server, database } = withServer(t);
+  const today = new Date().toISOString().slice(0, 10);
+  const id = db.insertEntry(database, { date: today, employer_name: 'ToToggle' });
+
+  const patch = await fetchApi(server, 'PATCH', `/api/entries/${id}`, { is_dream: true });
+  assert.equal(patch.status, 200);
+  assert.equal(patch.body.is_dream, 1);
+
+  const todayView = await fetchApi(server, 'GET', '/api/today');
+  assert.equal(todayView.body.entries.length, 0);
+
+  const jobs = await fetchApi(server, 'GET', '/api/jobs');
+  assert.equal(jobs.body.jobs.length, 1);
+  assert.equal(jobs.body.jobs[0].is_dream, 1);
+});
+
+test('Network: kind=network entries appear in /api/network, not /api/jobs or /api/today', async (t) => {
+  const { server } = withServer(t);
+  const today = new Date().toISOString().slice(0, 10);
+
+  await fetchApi(server, 'POST', '/api/entries', { date: today, employer_name: 'JobCo', kind: 'job' });
+  await fetchApi(server, 'POST', '/api/entries', { date: today, employer_name: 'NetCo', person: 'Jordan', kind: 'network' });
+
+  const todayView = await fetchApi(server, 'GET', '/api/today');
+  assert.equal(todayView.body.entries.length, 1);
+  assert.equal(todayView.body.entries[0].employer_name, 'JobCo');
+
+  const jobs = await fetchApi(server, 'GET', '/api/jobs');
+  assert.equal(jobs.body.jobs.length, 1);
+  assert.equal(jobs.body.jobs[0].employer_name, 'JobCo');
+
+  const network = await fetchApi(server, 'GET', '/api/network');
+  assert.equal(network.body.network.length, 1);
+  assert.equal(network.body.network[0].employer_name, 'NetCo');
+  assert.equal(network.body.network[0].person, 'Jordan');
 });
 
 test('Promote a dream to a regular entry', async (t) => {
@@ -177,11 +215,12 @@ test('Promote a dream to a regular entry', async (t) => {
   assert.equal(res.status, 200);
   assert.equal(res.body.is_dream, 0);
 
-  // Dream list should be empty; today's entries should now include it.
-  const dreams = await fetchApi(server, 'GET', '/api/dreams');
-  assert.equal(dreams.body.dreams.length, 0);
+  // Promoted entry now appears in /api/today; still in /api/jobs as a non-dream.
   const todayView = await fetchApi(server, 'GET', '/api/today');
   assert.equal(todayView.body.entries.length, 1);
+  const jobs = await fetchApi(server, 'GET', '/api/jobs');
+  assert.equal(jobs.body.jobs.length, 1);
+  assert.equal(jobs.body.jobs[0].is_dream, 0);
 });
 
 test('Promoting a non-dream entry is a 404', async (t) => {

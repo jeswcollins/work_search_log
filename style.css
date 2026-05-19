@@ -176,7 +176,7 @@ a:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; bor
 .topnav {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-4);
   padding: var(--space-3) var(--space-5);
   margin: 0 calc(var(--space-5) * -1) var(--space-5);
   background: var(--surface);
@@ -187,15 +187,50 @@ a:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; bor
   backdrop-filter: blur(8px);
 }
 
-.topnav a {
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-weight: 700;
+  font-size: var(--font-base);
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  transition: background var(--transition);
+}
+.brand:hover { background: var(--surface-2); text-decoration: none; color: var(--text); }
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.topnav-links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.topnav-links a {
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   color: var(--text-muted);
   font-weight: 500;
+  text-decoration: none;
   transition: background var(--transition), color var(--transition);
 }
-.topnav a:hover  { background: var(--surface-2); color: var(--text); text-decoration: none; }
-.topnav a.active { background: var(--accent-bg); color: var(--accent-text); }
+.topnav-links a:hover  { background: var(--surface-2); color: var(--text); text-decoration: none; }
+.topnav-links a.active { background: var(--accent-bg); color: var(--accent-text); }
 
 /* ------------------------------------------------------------------ *
  * Week navigation row                                                 *
@@ -384,6 +419,172 @@ table.entries tr.legacy td           { color: var(--text-muted); font-style: ita
  * Delete control                                                      *
  * ------------------------------------------------------------------ */
 .delete-form { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--border); }
+
+/* ------------------------------------------------------------------ *
+ * Card lists (Job List, Network List)                                 *
+ * ------------------------------------------------------------------ */
+.list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.filter-pills {
+  display: flex;
+  gap: var(--space-1);
+  background: var(--surface-2);
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+}
+.pill {
+  font: inherit;
+  font-size: var(--font-sm);
+  font-weight: 500;
+  padding: var(--space-1) var(--space-3);
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  box-shadow: none;
+  transition: background var(--transition), color var(--transition);
+}
+.pill:hover  { background: var(--surface); color: var(--text); }
+.pill.active { background: var(--surface); color: var(--accent-text); border-color: var(--accent-border); }
+.pill-static {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  background: var(--accent-bg);
+  color: var(--accent-text);
+  border-radius: 999px;
+  font-size: var(--font-xs);
+  font-weight: 600;
+}
+
+.contact-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.contact {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.contact:hover { border-color: var(--accent-border); box-shadow: var(--shadow-sm); }
+.contact.is-dream {
+  background: var(--surface-2);
+  border-style: dashed;
+}
+
+.contact-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.contact-headline {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.primary-link {
+  font-size: var(--font-lg);
+  font-weight: 600;
+  color: var(--accent-text);
+  text-decoration: none;
+}
+.primary-link:not(a) { color: var(--text); }
+a.primary-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.contact-person {
+  color: var(--text-muted);
+  font-size: var(--font-base);
+  font-weight: 500;
+}
+
+.contact-notes {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--font-sm);
+  line-height: 1.45;
+}
+
+.contact-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--font-xs);
+}
+
+.contact-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.dream-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.dream-toggle input { accent-color: var(--accent); }
+
+.action-link {
+  font-size: var(--font-sm);
+  color: var(--accent-text);
+  text-decoration: none;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+.action-link:hover { background: var(--surface-2); text-decoration: none; }
+
+button.ghost.danger-text {
+  color: var(--danger);
+  border-color: var(--border);
+  font-size: var(--font-sm);
+  padding: var(--space-1) var(--space-3);
+}
+button.ghost.danger-text:hover {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger-hover);
+}
+
+.form-actions {
+  margin-top: var(--space-3);
+  display: flex;
+  gap: var(--space-2);
+}
+
+.entry-form .span-full { grid-column: 1 / -1; }
+
+@media (max-width: 640px) {
+  .contact { flex-direction: column; }
+  .contact-actions { width: 100%; justify-content: flex-end; }
+}
 
 /* ------------------------------------------------------------------ *
  * Print                                                               *

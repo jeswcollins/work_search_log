@@ -29,10 +29,10 @@ export default function Today() {
 
   return (
     <>
-      <h2>Work Search Log</h2>
+      <h2>Today's Log</h2>
       <p className="muted">
         Logging for {data.date}. Activities are kept locally on your machine.
-        {' '}<Link to="/dreams">View dream jobs &rarr;</Link>
+        {' '}<Link to="/jobs">View full job list &rarr;</Link>
       </p>
 
       <section className="card">
