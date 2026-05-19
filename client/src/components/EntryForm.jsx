@@ -76,9 +76,6 @@ export default function EntryForm({ initial, submitLabel, onSubmit, kind = 'job'
 
   return (
     <form className="entry-form" onSubmit={handleSubmit}>
-      <Field title="Date">
-        <input type="date" value={values.date} onChange={update('date')} required />
-      </Field>
       <Field title="Type">
         <Select value={values.type} onChange={update('type')} options={TYPES} />
       </Field>
@@ -105,6 +102,9 @@ export default function EntryForm({ initial, submitLabel, onSubmit, kind = 'job'
       </Field>
       <Field title="Notes" className="span-full">
         <textarea rows={2} value={values.description} onChange={update('description')} />
+      </Field>
+      <Field title="Date">
+        <input type="date" value={values.date} onChange={update('date')} required />
       </Field>
 
       {error && <p className="banner warn" role="alert">{error}</p>}
