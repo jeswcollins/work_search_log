@@ -231,6 +231,25 @@ test('Promoting a non-dream entry is a 404', async (t) => {
   assert.equal(res.status, 404);
 });
 
+test('PATCH applied:false un-flips the flag', async (t) => {
+  const { server, database } = withServer(t);
+  const id = db.insertEntry(database, {
+    date: '2026-05-10', employer_name: 'X', is_dream: true, applied: true,
+  });
+
+  // Confirm starting state.
+  assert.equal(db.getEntry(database, id).applied, 1);
+
+  const off = await fetchApi(server, 'PATCH', `/api/entries/${id}`, { applied: false });
+  assert.equal(off.status, 200);
+  assert.equal(off.body.applied, 0);
+  assert.equal(db.getEntry(database, id).applied, 0);
+
+  // And back on, for symmetry.
+  const on = await fetchApi(server, 'PATCH', `/api/entries/${id}`, { applied: true });
+  assert.equal(on.body.applied, 1);
+});
+
 test('Job list sorts dreams not-applied above dreams applied', async (t) => {
   const { server, database } = withServer(t);
   // active job, dream-applied, dream-not-applied — all on the same day.
