@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import EntryForm from '../components/EntryForm.jsx';
+import { UsersIcon } from '../components/Icons.jsx';
 import { api } from '../api.js';
 
 export default function Network() {
@@ -30,7 +31,10 @@ export default function Network() {
 
   return (
     <>
-      <h2>Network List</h2>
+      <div className="page-heading">
+        <UsersIcon size={22} className="page-icon network" />
+        <h2>Network List</h2>
+      </div>
       <p className="muted">
         Individual people to keep in touch with. Personal contacts that may
         not be tied to a specific job application.

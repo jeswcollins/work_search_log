@@ -1,4 +1,5 @@
 import { NavLink, Link, Outlet } from 'react-router-dom';
+import { DocumentIcon, BriefcaseIcon, UsersIcon } from './components/Icons.jsx';
 
 export default function App() {
   return (
@@ -6,29 +7,21 @@ export default function App() {
       <nav className="topnav">
         <Link to="/" className="brand">
           <span className="brand-mark" aria-hidden="true">
-            <svg
-              viewBox="0 0 24 24"
-              width="16"
-              height="16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="8" y1="13" x2="16" y2="13" />
-              <line x1="8" y1="17" x2="16" y2="17" />
-            </svg>
+            <DocumentIcon size={16} />
           </span>
           <span className="brand-text">Work Search Log</span>
         </Link>
         <div className="topnav-links">
           <NavLink to="/" end>Today's Log</NavLink>
           <NavLink to="/week">Week's Log</NavLink>
-          <NavLink to="/network">Network List</NavLink>
-          <NavLink to="/jobs">Job List</NavLink>
+          <NavLink to="/network">
+            <UsersIcon size={16} className="nav-icon network" />
+            Network List
+          </NavLink>
+          <NavLink to="/jobs">
+            <BriefcaseIcon size={16} className="nav-icon job" />
+            Job List
+          </NavLink>
         </div>
       </nav>
       <main>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import EntryForm from '../components/EntryForm.jsx';
+import { BriefcaseIcon } from '../components/Icons.jsx';
 import { api } from '../api.js';
 
 export default function Jobs() {
@@ -43,7 +44,10 @@ export default function Jobs() {
 
   return (
     <>
-      <h2>Job List</h2>
+      <div className="page-heading">
+        <BriefcaseIcon size={22} className="page-icon job" />
+        <h2>Job List</h2>
+      </div>
       <p className="muted">
         All job-related entries — both logged work searches and dream ideas.
         Toggle <strong>Dream</strong> to mark something as an idea that doesn't
