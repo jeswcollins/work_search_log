@@ -31,6 +31,11 @@ export default function Jobs() {
     await load();
   }
 
+  async function toggleApplied(id, next) {
+    await api.patchEntry(id, { applied: next });
+    await load();
+  }
+
   async function handleDelete(id) {
     if (!confirm('Delete this entry?')) return;
     await api.deleteEntry(id);
@@ -164,6 +169,14 @@ export default function Jobs() {
                         onChange={(e) => toggleDream(j.id, e.target.checked)}
                       />
                       Dream
+                    </label>
+                    <label className="dream-toggle">
+                      <input
+                        type="checkbox"
+                        checked={!!j.applied}
+                        onChange={(e) => toggleApplied(j.id, e.target.checked)}
+                      />
+                      Applied
                     </label>
                     <button
                       type="button"

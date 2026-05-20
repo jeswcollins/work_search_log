@@ -32,6 +32,7 @@ function init(db) {
       description     TEXT,
       legacy          INTEGER NOT NULL DEFAULT 0,
       is_dream        INTEGER NOT NULL DEFAULT 0,
+      applied         INTEGER NOT NULL DEFAULT 0,
       created_at      INTEGER NOT NULL,
       updated_at      INTEGER NOT NULL
     );
@@ -65,6 +66,9 @@ function init(db) {
   if (!cols.includes('kind')) {
     db.exec(`ALTER TABLE entries ADD COLUMN kind TEXT NOT NULL DEFAULT 'job'`);
   }
+  if (!cols.includes('applied')) {
+    db.exec(`ALTER TABLE entries ADD COLUMN applied INTEGER NOT NULL DEFAULT 0`);
+  }
 
   db.exec(`CREATE INDEX IF NOT EXISTS entries_dream_idx ON entries(is_dream)`);
   db.exec(`CREATE INDEX IF NOT EXISTS entries_kind_idx  ON entries(kind)`);
@@ -80,18 +84,19 @@ function insertEntry(db, fields) {
   const row = pick(fields, FIELDS);
   const legacy = fields.legacy ? 1 : 0;
   const is_dream = fields.is_dream ? 1 : 0;
+  const applied = fields.applied ? 1 : 0;
   const kind = (fields.kind === 'network') ? 'network' : 'job';
   const stmt = db.prepare(`
     INSERT INTO entries
       (date, kind, type, employer_name, person, contact_method, contact_info,
-       type_of_work, results, link, description, legacy, is_dream,
+       type_of_work, results, link, description, legacy, is_dream, applied,
        created_at, updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `);
   const info = stmt.run(
     row.date, kind, row.type, row.employer_name, row.person, row.contact_method,
     row.contact_info, row.type_of_work, row.results, row.link, row.description,
-    legacy, is_dream, now, now
+    legacy, is_dream, applied, now, now
   );
   return Number(info.lastInsertRowid);
 }
@@ -101,13 +106,14 @@ function patchEntry(db, id, patch) {
   if (!cur) return 0;
   const next = { ...cur, ...patch };
   const is_dream = next.is_dream ? 1 : 0;
+  const applied = next.applied ? 1 : 0;
   const kind = (next.kind === 'network') ? 'network' : 'job';
   const stmt = db.prepare(`
     UPDATE entries SET
-      kind = ?, is_dream = ?, updated_at = ?
+      kind = ?, is_dream = ?, applied = ?, updated_at = ?
     WHERE id = ?
   `);
-  return stmt.run(kind, is_dream, Date.now(), Number(id)).changes;
+  return stmt.run(kind, is_dream, applied, Date.now(), Number(id)).changes;
 }
 
 function updateEntry(db, id, fields) {
@@ -164,7 +170,7 @@ function entriesByWeek(db, weekStartISO, weekEndISO) {
 function allJobs(db) {
   return db.prepare(
     `SELECT * FROM entries WHERE kind = 'job'
-     ORDER BY is_dream ASC, date DESC, created_at DESC`
+     ORDER BY is_dream ASC, applied ASC, date DESC, created_at DESC`
   ).all();
 }
 

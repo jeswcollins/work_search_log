@@ -231,6 +231,25 @@ test('Promoting a non-dream entry is a 404', async (t) => {
   assert.equal(res.status, 404);
 });
 
+test('Job list sorts dreams not-applied above dreams applied', async (t) => {
+  const { server, database } = withServer(t);
+  // active job, dream-applied, dream-not-applied — all on the same day.
+  const active = db.insertEntry(database, { date: '2026-05-10', employer_name: 'ActiveCo' });
+  const dreamApplied = db.insertEntry(database, {
+    date: '2026-05-10', employer_name: 'AppliedDream',
+    is_dream: true, applied: true,
+  });
+  const dreamNot = db.insertEntry(database, {
+    date: '2026-05-10', employer_name: 'NotAppliedDream',
+    is_dream: true, applied: false,
+  });
+
+  const res = await fetchApi(server, 'GET', '/api/jobs');
+  const order = res.body.jobs.map(j => j.employer_name);
+  // Active first, then not-applied dream, then applied dream.
+  assert.deepEqual(order, ['ActiveCo', 'NotAppliedDream', 'AppliedDream']);
+});
+
 test('Linking: POST /api/entries/:id/links creates a job<->network link', async (t) => {
   const { server, database } = withServer(t);
   const today = new Date().toISOString().slice(0, 10);
