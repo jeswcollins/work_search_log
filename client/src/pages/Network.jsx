@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import EntryForm from '../components/EntryForm.jsx';
+import LinkChips from '../components/LinkChips.jsx';
 import { UsersIcon } from '../components/Icons.jsx';
 import { api } from '../api.js';
 import { prettyUrl } from '../format.js';
@@ -81,6 +82,7 @@ export default function Network() {
                         {prettyUrl(c.link)}
                       </a>
                     )}
+                    <LinkChips links={c.links} />
                     <div className="contact-meta">
                       <span>added {c.date}</span>
                       {c.contact_method && <span>·  {c.contact_method}</span>}

@@ -231,6 +231,92 @@ test('Promoting a non-dream entry is a 404', async (t) => {
   assert.equal(res.status, 404);
 });
 
+test('Linking: POST /api/entries/:id/links creates a job<->network link', async (t) => {
+  const { server, database } = withServer(t);
+  const today = new Date().toISOString().slice(0, 10);
+  const jobId = db.insertEntry(database, { date: today, employer_name: 'LinkCo', kind: 'job' });
+  const netId = db.insertEntry(database, { date: today, person: 'Linkster', kind: 'network' });
+
+  const res = await fetchApi(server, 'POST', `/api/entries/${jobId}/links`, { other_id: netId });
+  assert.equal(res.status, 201);
+  assert.equal(res.body.ok, true);
+  assert.equal(res.body.existed, false);
+
+  // Both sides see the link.
+  const jobGet = await fetchApi(server, 'GET', `/api/entries/${jobId}`);
+  assert.equal(jobGet.body.links.length, 1);
+  assert.equal(jobGet.body.links[0].id, netId);
+
+  const netGet = await fetchApi(server, 'GET', `/api/entries/${netId}`);
+  assert.equal(netGet.body.links.length, 1);
+  assert.equal(netGet.body.links[0].id, jobId);
+});
+
+test('Linking: duplicate POST returns existed:true', async (t) => {
+  const { server, database } = withServer(t);
+  const today = new Date().toISOString().slice(0, 10);
+  const jobId = db.insertEntry(database, { date: today, employer_name: 'A', kind: 'job' });
+  const netId = db.insertEntry(database, { date: today, person: 'B', kind: 'network' });
+
+  await fetchApi(server, 'POST', `/api/entries/${jobId}/links`, { other_id: netId });
+  const dup = await fetchApi(server, 'POST', `/api/entries/${jobId}/links`, { other_id: netId });
+  assert.equal(dup.status, 200);
+  assert.equal(dup.body.existed, true);
+});
+
+test('Linking: two jobs cannot be linked', async (t) => {
+  const { server, database } = withServer(t);
+  const today = new Date().toISOString().slice(0, 10);
+  const a = db.insertEntry(database, { date: today, employer_name: 'A', kind: 'job' });
+  const b = db.insertEntry(database, { date: today, employer_name: 'B', kind: 'job' });
+
+  const res = await fetchApi(server, 'POST', `/api/entries/${a}/links`, { other_id: b });
+  assert.equal(res.status, 400);
+});
+
+test('Linking: DELETE removes the link', async (t) => {
+  const { server, database } = withServer(t);
+  const today = new Date().toISOString().slice(0, 10);
+  const jobId = db.insertEntry(database, { date: today, employer_name: 'A', kind: 'job' });
+  const netId = db.insertEntry(database, { date: today, person: 'B', kind: 'network' });
+
+  await fetchApi(server, 'POST', `/api/entries/${jobId}/links`, { other_id: netId });
+  const del = await fetchApi(server, 'DELETE', `/api/entries/${jobId}/links/${netId}`);
+  assert.equal(del.status, 200);
+
+  const jobGet = await fetchApi(server, 'GET', `/api/entries/${jobId}`);
+  assert.equal(jobGet.body.links.length, 0);
+});
+
+test('Linking: deleting an entry cascades to its links', async (t) => {
+  const { server, database } = withServer(t);
+  const today = new Date().toISOString().slice(0, 10);
+  const jobId = db.insertEntry(database, { date: today, employer_name: 'A', kind: 'job' });
+  const netId = db.insertEntry(database, { date: today, person: 'B', kind: 'network' });
+  await fetchApi(server, 'POST', `/api/entries/${jobId}/links`, { other_id: netId });
+
+  await fetchApi(server, 'DELETE', `/api/entries/${netId}`);
+
+  const jobGet = await fetchApi(server, 'GET', `/api/entries/${jobId}`);
+  assert.equal(jobGet.body.links.length, 0);
+});
+
+test('List endpoints include links per row', async (t) => {
+  const { server, database } = withServer(t);
+  const today = new Date().toISOString().slice(0, 10);
+  const jobId = db.insertEntry(database, { date: today, employer_name: 'JobX', kind: 'job' });
+  const netId = db.insertEntry(database, { date: today, person: 'NetX', kind: 'network' });
+  await fetchApi(server, 'POST', `/api/entries/${jobId}/links`, { other_id: netId });
+
+  const jobs = await fetchApi(server, 'GET', '/api/jobs');
+  assert.equal(jobs.body.jobs[0].links.length, 1);
+  assert.equal(jobs.body.jobs[0].links[0].id, netId);
+
+  const network = await fetchApi(server, 'GET', '/api/network');
+  assert.equal(network.body.network[0].links.length, 1);
+  assert.equal(network.body.network[0].links[0].id, jobId);
+});
+
 test('legacy HTML parser extracts rows', async () => {
   const { parseLegacyHtml } = require('../migrate');
   const html = `<table><tr><th>Job Title<th>Organization<th>Person<th>Contact Info<th>Description<th>Link<tr><td>scientist<td>Catalent<td>Emory's Dad<td>Boston, MA<td><td><a href=></a></table>`;

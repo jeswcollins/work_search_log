@@ -44,6 +44,17 @@ function init(db) {
       notes       TEXT,
       updated_at  INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS entry_links (
+      job_id      INTEGER NOT NULL,
+      network_id  INTEGER NOT NULL,
+      created_at  INTEGER NOT NULL,
+      PRIMARY KEY (job_id, network_id),
+      FOREIGN KEY (job_id)     REFERENCES entries(id) ON DELETE CASCADE,
+      FOREIGN KEY (network_id) REFERENCES entries(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS entry_links_network_idx ON entry_links(network_id);
   `);
 
   // Defensive migrations for databases created on earlier branches.
@@ -164,6 +175,68 @@ function allNetwork(db) {
   ).all();
 }
 
+/*
+ * Link management.
+ *
+ * Given two entry ids (any order), normalize to (job_id, network_id) by
+ * inspecting each entry's kind, then insert. Returns:
+ *   { ok: true,  link: <row> }       on success
+ *   { ok: false, reason: 'same' }    if both entries are the same
+ *   { ok: false, reason: 'kind' }    if not exactly one job + one network
+ *   { ok: false, reason: 'missing' } if either id doesn't exist
+ *   { ok: true,  link: <row>, existed: true } if the link already existed
+ */
+function linkEntries(db, idA, idB) {
+  if (idA === idB) return { ok: false, reason: 'same' };
+  const a = getEntry(db, idA);
+  const b = getEntry(db, idB);
+  if (!a || !b) return { ok: false, reason: 'missing' };
+  const job     = a.kind === 'job'     ? a : b.kind === 'job'     ? b : null;
+  const network = a.kind === 'network' ? a : b.kind === 'network' ? b : null;
+  if (!job || !network) return { ok: false, reason: 'kind' };
+
+  const existing = db.prepare(
+    'SELECT * FROM entry_links WHERE job_id = ? AND network_id = ?'
+  ).get(job.id, network.id);
+  if (existing) return { ok: true, link: existing, existed: true };
+
+  const now = Date.now();
+  db.prepare(
+    'INSERT INTO entry_links (job_id, network_id, created_at) VALUES (?, ?, ?)'
+  ).run(job.id, network.id, now);
+  return { ok: true, link: { job_id: job.id, network_id: network.id, created_at: now } };
+}
+
+function unlinkEntries(db, idA, idB) {
+  const info = db.prepare(
+    `DELETE FROM entry_links
+     WHERE (job_id = ? AND network_id = ?)
+        OR (job_id = ? AND network_id = ?)`
+  ).run(idA, idB, idB, idA);
+  return info.changes;
+}
+
+/* Return the entries linked to a given entry id, regardless of side. */
+function linksFor(db, id) {
+  return db.prepare(
+    `SELECT e.* FROM entries e
+     JOIN entry_links l ON l.network_id = e.id
+     WHERE l.job_id = ?
+     UNION ALL
+     SELECT e.* FROM entries e
+     JOIN entry_links l ON l.job_id = e.id
+     WHERE l.network_id = ?
+     ORDER BY date DESC, created_at DESC`
+  ).all(id, id);
+}
+
+/* For a set of entry ids, return a map { id => linked_entries[] }. */
+function linksForMany(db, ids) {
+  const out = {};
+  for (const id of ids) out[id] = linksFor(db, id);
+  return out;
+}
+
 function getWeekMeta(db, weekStart) {
   return db.prepare('SELECT * FROM week_meta WHERE week_start = ?').get(weekStart);
 }
@@ -200,6 +273,10 @@ module.exports = {
   entriesByWeek,
   allJobs,
   allNetwork,
+  linkEntries,
+  unlinkEntries,
+  linksFor,
+  linksForMany,
   getWeekMeta,
   setWeekMeta,
   FIELDS,

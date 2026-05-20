@@ -148,11 +148,11 @@ async function handleApi(req, res, pathname, database) {
   }
 
   if (req.method === 'GET' && pathname === '/api/jobs') {
-    return json(res, 200, { jobs: db.allJobs(database) });
+    return json(res, 200, { jobs: withLinks(database, db.allJobs(database)) });
   }
 
   if (req.method === 'GET' && pathname === '/api/network') {
-    return json(res, 200, { network: db.allNetwork(database) });
+    return json(res, 200, { network: withLinks(database, db.allNetwork(database)) });
   }
 
   if (req.method === 'POST' && pathname === '/api/entries') {
@@ -164,12 +164,37 @@ async function handleApi(req, res, pathname, database) {
     return json(res, 201, db.getEntry(database, id));
   }
 
+  if ((m = pathname.match(/^\/api\/entries\/(\d+)\/links\/(\d+)$/))) {
+    const id = Number(m[1]);
+    const otherId = Number(m[2]);
+    if (req.method === 'DELETE') {
+      const removed = db.unlinkEntries(database, id, otherId);
+      return json(res, removed ? 200 : 404, { ok: !!removed });
+    }
+  }
+
+  if (req.method === 'POST' && (m = pathname.match(/^\/api\/entries\/(\d+)\/links$/))) {
+    const id = Number(m[1]);
+    const { other_id } = await parseJson(req);
+    if (!other_id) return json(res, 400, { error: 'other_id required' });
+    const result = db.linkEntries(database, id, Number(other_id));
+    if (!result.ok) {
+      const status = result.reason === 'missing' ? 404 : 400;
+      return json(res, status, { error: `cannot link: ${result.reason}` });
+    }
+    return json(res, result.existed ? 200 : 201, {
+      ok: true,
+      existed: !!result.existed,
+      link: result.link,
+    });
+  }
+
   if ((m = pathname.match(/^\/api\/entries\/(\d+)$/))) {
     const id = Number(m[1]);
     if (req.method === 'GET') {
       const row = db.getEntry(database, id);
       if (!row) return json(res, 404, { error: 'Not found' });
-      return json(res, 200, row);
+      return json(res, 200, { ...row, links: db.linksFor(database, id) });
     }
     if (req.method === 'PUT') {
       const fields = await parseJson(req);
@@ -237,6 +262,13 @@ async function handleApi(req, res, pathname, database) {
   }
 
   return json(res, 404, { error: 'Not found' });
+}
+
+/* Attach a `links` array to each entry in a list response. */
+function withLinks(database, rows) {
+  if (!rows.length) return rows;
+  const linksByEntry = db.linksForMany(database, rows.map(r => r.id));
+  return rows.map(r => ({ ...r, links: linksByEntry[r.id] || [] }));
 }
 
 function start({ port = PORT, dbPath } = {}) {

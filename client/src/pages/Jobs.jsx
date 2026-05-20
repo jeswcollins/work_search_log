@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import EntryForm from '../components/EntryForm.jsx';
-import { BriefcaseIcon } from '../components/Icons.jsx';
+import LinkContactsModal from '../components/LinkContactsModal.jsx';
+import LinkChips from '../components/LinkChips.jsx';
+import { BriefcaseIcon, LinkIcon } from '../components/Icons.jsx';
 import { api } from '../api.js';
 import { prettyUrl } from '../format.js';
 
@@ -10,6 +12,7 @@ export default function Jobs() {
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState('all'); // all | active | dream
+  const [linkingJobId, setLinkingJobId] = useState(null);
 
   const load = useCallback(async () => {
     try { setJobs((await api.jobs()).jobs); } catch (err) { setError(err.message); }
@@ -34,12 +37,33 @@ export default function Jobs() {
     await load();
   }
 
+  async function handlePickedContact(contact) {
+    if (!linkingJobId) return;
+    try {
+      await api.link(linkingJobId, contact.id);
+      setLinkingJobId(null);
+      await load();
+    } catch (err) { setError(err.message); }
+  }
+
+  async function handleUnlink(jobId, contact) {
+    if (!confirm(`Unlink ${contact.person || contact.employer_name || 'this contact'}?`)) return;
+    await api.unlink(jobId, contact.id);
+    await load();
+  }
+
   const visible = useMemo(() => {
     if (!jobs) return null;
     if (filter === 'active') return jobs.filter((j) => !j.is_dream);
     if (filter === 'dream')  return jobs.filter((j) =>  j.is_dream);
     return jobs;
   }, [jobs, filter]);
+
+  const linkingJob = linkingJobId && jobs ? jobs.find(j => j.id === linkingJobId) : null;
+  const linkedIdsForModal = useMemo(
+    () => new Set((linkingJob?.links || []).map(l => l.id)),
+    [linkingJob]
+  );
 
   if (error) return <p className="banner warn">{error}</p>;
 
@@ -121,6 +145,10 @@ export default function Jobs() {
                         {prettyUrl(j.link)}
                       </a>
                     )}
+                    <LinkChips
+                      links={j.links}
+                      onUnlink={(other) => handleUnlink(j.id, other)}
+                    />
                     <div className="contact-meta">
                       <span>{j.date}</span>
                       {j.contact_method && <span>·  {j.contact_method}</span>}
@@ -137,6 +165,15 @@ export default function Jobs() {
                       />
                       Dream
                     </label>
+                    <button
+                      type="button"
+                      className="ghost icon-text"
+                      onClick={() => setLinkingJobId(j.id)}
+                      title="Link a contact to this job"
+                    >
+                      <LinkIcon size={14} />
+                      Link Contact
+                    </button>
                     <Link to={`/entries/${j.id}/edit`} className="action-link">Edit</Link>
                     <button
                       type="button"
@@ -149,6 +186,14 @@ export default function Jobs() {
             </ul>
           )}
       </section>
+
+      {linkingJob && (
+        <LinkContactsModal
+          linkedIds={linkedIdsForModal}
+          onClose={() => setLinkingJobId(null)}
+          onPick={handlePickedContact}
+        />
+      )}
     </>
   );
 }

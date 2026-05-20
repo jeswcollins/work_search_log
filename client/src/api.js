@@ -26,5 +26,7 @@ export const api = {
   setWeekMeta: (start, meta) => request('POST', `/api/week/${start}/meta`, meta),
   jobs: () => request('GET', '/api/jobs'),
   network: () => request('GET', '/api/network'),
+  link: (id, otherId) => request('POST', `/api/entries/${id}/links`, { other_id: otherId }),
+  unlink: (id, otherId) => request('DELETE', `/api/entries/${id}/links/${otherId}`),
   csvUrl: (start) => `/api/week/${start}.csv`,
 };
