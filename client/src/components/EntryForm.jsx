@@ -76,14 +76,14 @@ export default function EntryForm({ initial, submitLabel, onSubmit, kind = 'job'
 
   return (
     <form className="entry-form" onSubmit={handleSubmit}>
-      <Field title="Type">
-        <Select value={values.type} onChange={update('type')} options={TYPES} />
-      </Field>
       <Field title="Employer / Agency">
         <input type="text" value={values.employer_name} onChange={update('employer_name')} required />
       </Field>
       <Field title="Person contacted">
         <input type="text" value={values.person} onChange={update('person')} />
+      </Field>
+      <Field title="Link" hint="(optional — job post, etc.)">
+        <input type="url" value={values.link} onChange={update('link')} />
       </Field>
       <Field title="Contact method">
         <Select value={values.contact_method} onChange={update('contact_method')} options={CONTACT_METHODS} />
@@ -97,14 +97,14 @@ export default function EntryForm({ initial, submitLabel, onSubmit, kind = 'job'
       <Field title="Results">
         <Select value={values.results} onChange={update('results')} options={RESULTS} />
       </Field>
-      <Field title="Link" hint="(optional)">
-        <input type="url" value={values.link} onChange={update('link')} />
-      </Field>
       <Field title="Notes" className="span-full">
         <textarea rows={2} value={values.description} onChange={update('description')} />
       </Field>
       <Field title="Date">
         <input type="date" value={values.date} onChange={update('date')} required />
+      </Field>
+      <Field title="Type">
+        <Select value={values.type} onChange={update('type')} options={TYPES} />
       </Field>
 
       {error && <p className="banner warn" role="alert">{error}</p>}
