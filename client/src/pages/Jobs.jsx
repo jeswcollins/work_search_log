@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import EntryForm from '../components/EntryForm.jsx';
 import { BriefcaseIcon } from '../components/Icons.jsx';
 import { api } from '../api.js';
+import { prettyUrl } from '../format.js';
 
 export default function Jobs() {
   const [jobs, setJobs] = useState(null);
@@ -114,6 +115,11 @@ export default function Jobs() {
                         {j.type_of_work && j.description ? ' — ' : ''}
                         {j.description}
                       </p>
+                    )}
+                    {j.link && (
+                      <a href={j.link} target="_blank" rel="noopener" className="contact-link" title={j.link}>
+                        {prettyUrl(j.link)}
+                      </a>
                     )}
                     <div className="contact-meta">
                       <span>{j.date}</span>

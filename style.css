@@ -558,6 +558,29 @@ a.primary-link:hover { text-decoration: underline; text-underline-offset: 3px; }
   line-height: 1.45;
 }
 
+.contact-link {
+  align-self: flex-start;
+  max-width: 100%;
+  display: inline-block;
+  padding: 2px var(--space-2);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: var(--font-xs);
+  color: var(--accent-text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background var(--transition), border-color var(--transition);
+}
+.contact-link:hover {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+  text-decoration: none;
+}
+
 .contact-meta {
   display: flex;
   flex-wrap: wrap;

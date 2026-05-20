@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import EntryForm from '../components/EntryForm.jsx';
 import { UsersIcon } from '../components/Icons.jsx';
 import { api } from '../api.js';
+import { prettyUrl } from '../format.js';
 
 export default function Network() {
   const [contacts, setContacts] = useState(null);
@@ -75,6 +76,11 @@ export default function Network() {
                       <span className="contact-person">{c.employer_name}</span>
                     </div>
                     {c.description && <p className="contact-notes">{c.description}</p>}
+                    {c.link && (
+                      <a href={c.link} target="_blank" rel="noopener" className="contact-link" title={c.link}>
+                        {prettyUrl(c.link)}
+                      </a>
+                    )}
                     <div className="contact-meta">
                       <span>added {c.date}</span>
                       {c.contact_method && <span>·  {c.contact_method}</span>}
