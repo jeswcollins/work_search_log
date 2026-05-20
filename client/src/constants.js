@@ -1,11 +1,15 @@
+// MA DUA accepts these as the categories of work-search activity.
+// Source: mass.gov/info-details/work-search-examples + MassHire's
+// "What Constitutes Work Search Activity" handout.
 export const TYPES = [
-  'Employer',
+  'Application',
+  'Interview',
+  'Job Search',
+  'Networking',
   'Career Fair',
-  'Networking Event',
   'Workshop',
-  'Career Counseling',
   'MassHire Service',
-  'Application Submitted',
+  'Union Hall',
   'Other',
 ];
 
