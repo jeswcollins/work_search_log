@@ -1,0 +1,29 @@
+[Unit]
+Description=Work Search Log (Phase 1 React SPA)
+Documentation=https://github.com/jeswcollins/work_search_log
+After=network.target
+
+[Service]
+Type=simple
+# Replace `jesse` with the user that owns /srv/work_search_log.
+User=jesse
+Group=jesse
+WorkingDirectory=/srv/work_search_log
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=3
+Environment=NODE_ENV=production
+Environment=PORT=1025
+
+# Hardening — server only needs to read its own dir and write to data/.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/srv/work_search_log/data
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target

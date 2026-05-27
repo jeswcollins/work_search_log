@@ -67,6 +67,14 @@ Last reviewed: 2026-05-20.
 - [x] VS Code task: `Ctrl+Shift+B` → "dev: fe + be" runs both in split panes
 - [x] CSS imported from JS so Vite dev server picks it up via HMR
 
+### CI/CD scaffolding (push-to-Pi)
+- [x] `.github/workflows/deploy-pi.yml` — GitHub Actions workflow: test, build, rsync, restart, smoke
+- [x] `deploy/work-search-log.service` — systemd unit (hardened with `ProtectSystem` etc.)
+- [x] `deploy/work-search-log.sudoers` — minimal sudo rule (`systemctl restart/status/reload` only)
+- [x] `SETUP-PI.md` — one-time Pi setup walkthrough (Node, deploy dir, service, sudoers, runner)
+- [ ] Wire up runner on the actual Pi and do the first deploy (manual step on the Pi)
+- [ ] Merge `phase-1-react` into `master` so the workflow fires on push
+
 ---
 
 ## Phase 1 — Follow-ups / polish

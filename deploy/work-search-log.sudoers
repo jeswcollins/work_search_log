@@ -1,0 +1,12 @@
+# Allow the GitHub Actions runner to restart (and inspect) the service
+# without a password, but nothing else. Replace `jesse` with the user
+# that runs the actions-runner process if it's different.
+#
+# Install with:
+#   sudo cp deploy/work-search-log.sudoers /etc/sudoers.d/work-search-log
+#   sudo chmod 0440 /etc/sudoers.d/work-search-log
+#   sudo visudo -c    # validate
+
+jesse ALL=(root) NOPASSWD: /bin/systemctl restart work-search-log
+jesse ALL=(root) NOPASSWD: /bin/systemctl status  work-search-log
+jesse ALL=(root) NOPASSWD: /bin/systemctl reload  work-search-log

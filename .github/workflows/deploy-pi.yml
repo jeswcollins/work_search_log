@@ -1,0 +1,82 @@
+name: Deploy to Pi
+
+on:
+  push:
+    branches: [master]
+  # Manual button in the Actions tab — useful for re-deploys or for
+  # one-off deploys from a non-master branch.
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch or commit SHA to deploy'
+        required: false
+        default: 'master'
+
+# Cancel an in-flight deploy if a newer one starts.
+concurrency:
+  group: deploy-pi
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    # Runs on the Pi-hosted runner. Add more labels at runner registration
+    # time if you want to be specific (e.g. `[self-hosted, linux, ARM64]`).
+    runs-on: self-hosted
+
+    env:
+      DEPLOY_DIR: /srv/work_search_log
+      SERVICE: work-search-log
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Build client
+        run: npm run build
+
+      - name: Deploy files to ${{ env.DEPLOY_DIR }}
+        # rsync writes the server source + built client to the deploy dir.
+        # data/, node_modules/, logs/, .git/ are excluded so persistent
+        # state survives and we don't push junk.
+        run: |
+          mkdir -p "$DEPLOY_DIR"
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='data' \
+            --exclude='logs' \
+            --exclude='tests' \
+            --exclude='*.md' \
+            ./ "$DEPLOY_DIR"/
+
+      - name: Restart service
+        run: sudo systemctl restart "$SERVICE"
+
+      - name: Smoke test
+        # Give the service a moment to bind, then probe /api/today.
+        run: |
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            sleep 1
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:1025/api/today || true)
+            if [ "$code" = "200" ]; then
+              echo "Service healthy (HTTP 200 on /api/today)"
+              exit 0
+            fi
+          done
+          echo "Service did not return 200 within 10s"
+          systemctl status "$SERVICE" --no-pager || true
+          exit 1
